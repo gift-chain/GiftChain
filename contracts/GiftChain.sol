@@ -1,32 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {GiftErrors} from  "../Library/error.sol";
+import {GiftErrors} from "../Library/error.sol";
 
 contract GiftChain {
-  struct Gift {
-    address token;
-    bool claimed;
-    uint256 expiry;
-    uint256 amount;
-    string message;
-    Status status;
-    address sender; //added sender to track who created the gift
+    struct Gift {
+        address token;
+        bool claimed;
+        uint256 expiry;
+        uint256 amount;
+        string message;
+        Status status;
+        address sender; //added sender to track who created the gift
+    }
 
-  }
+    enum Status {
+        NONE,
+        PENDING,
+        SUCCESSFUL,
+        RECLAIMED
+    }
 
-  enum Status {
-    NONE,
-    PENDING,
-    SUCCESSFUL,
-    RECLAIMED
-  }
+    mapping(bytes32 => Gift) public gifts;
 
-  mapping (bytes32 => Gift) public gifts;
-
-
-
-  function reclaimGift(string calldata rawCode) external {
+    function reclaimGift(string calldata rawCode) external {
         bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
         Gift storage gift = gifts[codeHash];
 
@@ -64,22 +61,9 @@ contract GiftChain {
             require(success, "Transfer failed");
         } else {
             // ERC20 token transfer (would need IERC20 interface)
-            // bool success = IERC20(gift.token).transfer(msg.sender, gift.amount);
-            // require(success, "Token transfer failed");
+            bool success = IERC20(gift.token).transfer(msg.sender, gift.amount);
+            require(success, "Token transfer failed");
             revert("ERC20 reclaim not yet implemented");
         }
-
-
     }
-
-
-
-
-  
-
 }
-
-
-
-
-
