@@ -11,6 +11,8 @@ contract GiftChain {
     uint256 amount;
     string message;
     Status status;
+    address sender; //added sender to track who created the gift
+
   }
 
   enum Status {
@@ -24,29 +26,60 @@ contract GiftChain {
 
 
 
-  // Working on validating gift
+  function reclaimGift(string calldata rawCode) external {
+        bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
+        Gift storage gift = gifts[codeHash];
 
-  function validateGift(string calldata rawCode) external view returns (bool){
-    bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
-    Gift memory gift = gifts[codeHash];
+        // Validate gift exists
+        if (gift.token == address(0)) {
+            revert GiftErrors.GiftNotFound();
+        }
 
-    if(gift.token == address(0)){
-      revert GiftErrors.GiftNotFound();
+        // Validate sender is original creator
+        if (msg.sender != gift.sender) {
+            revert GiftErrors.InvalidGiftStatus();
+        }
+
+        // Validate gift hasn't been claimed/reclaimed
+        if (gift.status == Status.SUCCESSFUL) {
+            revert GiftErrors.GiftAlreadyRedeemed();
+        }
+        if (gift.status == Status.RECLAIMED) {
+            revert GiftErrors.GiftAlreadyReclaimed();
+        }
+
+        // Validate gift is expired
+        if (block.timestamp <= gift.expiry) {
+            revert GiftErrors.InvalidGiftStatus();
+        }
+
+        // Update state before transfer to prevent reentrancy
+        gift.status = Status.RECLAIMED;
+        gift.claimed = true;
+
+        // Handle fund transfer based on token type
+        if (gift.token == address(0)) {
+            // Native token transfer
+            (bool success, ) = payable(msg.sender).call{value: gift.amount}("");
+            require(success, "Transfer failed");
+        } else {
+            // ERC20 token transfer (would need IERC20 interface)
+            // bool success = IERC20(gift.token).transfer(msg.sender, gift.amount);
+            // require(success, "Token transfer failed");
+            revert("ERC20 reclaim not yet implemented");
+        }
+
+
     }
 
-    if(gift.status == Status.SUCCESSFUL){
-      revert GiftErrors.GiftAlreadyRedeemed();
-    }
 
-    if(gift.status == Status.RECLAIMED) {
-      revert GiftErrors.GiftAlreadyReclaimed(); 
-    }
 
-    if(gift.status != Status.PENDING){
-      revert GiftErrors.InvalidGiftStatus();
-    }
 
-    return true;
-  }
+  
 
 }
+
+
+
+
+
