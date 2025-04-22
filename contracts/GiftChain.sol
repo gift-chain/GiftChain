@@ -36,6 +36,9 @@ contract GiftChain is ReentrancyGuard {
 
   event GiftCreated(bytes32 indexed, address indexed, string indexed, uint256, uint256);
 
+  event GiftReclaimed(bytes32 indexed code, address indexed recipient, uint256 amount);
+
+
   constructor(address _relayer) {
     relayer = _relayer;
   }
@@ -125,4 +128,41 @@ contract GiftChain is ReentrancyGuard {
     return true;
 
   }
+
+  function reclaimGift(string calldata rawCode) external nonReentrant {
+    bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
+    Gift storage gift = gifts[codeHash];
+
+    if (gift.token == address(0)) {
+        revert GiftErrors.GiftNotFound();
+    }
+
+    // Validate sender is original creator
+    if (keccak256(abi.encodePacked(msg.sender)) != gift.creator) {
+        revert GiftErrors.InvalidGiftStatus();
+    }
+
+    // Validate gift status
+    if (gift.status == Status.SUCCESSFUL) {
+        revert GiftErrors.GiftAlreadyRedeemed();
+    }
+    if (gift.status == Status.RECLAIMED) {
+        revert GiftErrors.GiftAlreadyReclaimed();
+    }
+    if (block.timestamp <= gift.expiry) {
+        revert GiftErrors.InvalidGiftStatus();
+    }
+
+    // Update state before transfer
+    gift.status = Status.RECLAIMED;
+    gift.claimed = true;
+
+    // Transfer ERC20 tokens back to creator
+    IERC20(gift.token).safeTransfer(msg.sender, gift.amount);
+
+    emit GiftReclaimed(codeHash, msg.sender, gift.amount);
+}
+
+
+
 }
