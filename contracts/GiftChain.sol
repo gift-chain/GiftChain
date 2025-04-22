@@ -1,24 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+  import {GiftErrors} from  "../Library/error.sol";
 
 
-contract GiftChain is ReentrancyGuard{
+contract GiftChain is ReentrancyGuard {
   using SafeERC20 for IERC20;
-
-import {GiftErrors} from  "../Library/error.sol";
-
-contract GiftChain {
+  address private relayer;
 
   struct Gift {
     address token;
     bool claimed;
     uint256 expiry;
+    uint256 timeCreated;
     uint256 amount;
     string message;
     Status status;
+    bytes32 creator;
   }
 
   enum Status {
@@ -32,6 +33,50 @@ contract GiftChain {
 
 
   event GiftClaimed(bytes32 indexed code, address indexed recipient, uint256 amount);
+
+  event GiftCreated(bytes32 indexed, address indexed, string indexed, uint256, uint256);
+
+  constructor(address _relayer) {
+    relayer = _relayer;
+  }
+
+  modifier onlyRelayer {
+    if(msg.sender != relayer) revert ONLY_RELAYER_HAS_ACCESS();
+    _;
+  }
+  
+
+  function createGift(
+    address _token, 
+    uint256 _amount, 
+    uint256 _expiry, 
+    string memory _message,
+    bytes32 _giftID,
+    bytes32 _creator
+    ) external onlyRelayer() {
+    if(_token == address(0)) revert GiftErrors.INVALID_ADDRESS();
+    if(_amount <= 0) revert GiftErrors.INVALID_AMOUNT();
+    if(_expiry <= block.timestamp) revert GiftErrors.EXPIRY_CAN_ONLY_BE_IN_FUTURE();
+    if(bytes(_message).length < 3 || bytes(_message).length > 50) revert GiftErrors.EXPECT_3_TO_50_MESSAGE_CHARACTER();
+    if(gifts[_giftID].timeCreated != 0) revert GiftErrors.CARD_ALREADY_EXIST();
+    IERC20 token = IERC20(_token);
+
+    if(!token.transferFrom(msg.sender, address(this), amount)) revert GiftErrors.TRANSFER_FAILED();
+
+    gifts[_giftID] = Gift({
+      token: _token,
+      claimed: false,
+      timeCreated: block.timestamp,
+      expiry: _expiry,
+      amount: _amount,
+      message: _message,
+      status: Status.PENDING,
+      creator: _creator
+    });
+
+    emit GiftCreated(_giftID, _token, _message, _amount, _expiry);
+  }
+
 
   function claimGift(bytes32 code) external nonReentrant {
     Gift storage gift = gifts[code];
@@ -54,7 +99,7 @@ contract GiftChain {
 
     emit GiftClaimed(code, msg.sender, gift.amount);
 
-
+  }
   // Working on validating gift
 
   function validateGift(string calldata rawCode) external view returns (bool){
@@ -80,5 +125,4 @@ contract GiftChain {
     return true;
 
   }
-
 }
