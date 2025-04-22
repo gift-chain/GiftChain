@@ -129,7 +129,6 @@ contract GiftChain is ReentrancyGuard {
 
   }
 
-
   function reclaimGift(string calldata rawCode) external nonReentrant {
     bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
     Gift storage gift = gifts[codeHash];
