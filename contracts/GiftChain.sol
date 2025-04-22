@@ -134,7 +134,6 @@ contract GiftChain is ReentrancyGuard {
     bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
     Gift storage gift = gifts[codeHash];
 
-    // Validate gift exists
     if (gift.token == address(0)) {
         revert GiftErrors.GiftNotFound();
     }
