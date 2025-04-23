@@ -3,12 +3,12 @@ const cors = require("cors");
 
 const mongoose = require("mongoose");
 const codeRoutes = require("./routes/codeRoutes.js");
-
+const { createGift } = require("./controllers/createGiftController.js");
 
 
 const app = express();
 
-mongoose.connect("mongodb+srv://victoradeoba83:CTDdAXepvymuPxb2@cluster0.7tyordv.mongodb.net/giftchain");
+mongoose.connect(process.env.MONGO_URI);
 const PORT = 3000;
 
 
@@ -31,7 +31,8 @@ app.get("/", (req, res) => {
   res.json("GiftChain backend is live");
 });
 
+app.post("/create-gift", createGift);
 
 app.listen(PORT, () => {
-  console.log(`✅ Backend running at PORT ${PORT}`);
+  console.log(`✅ Backend running at PORT ${PORT}...`);
 });

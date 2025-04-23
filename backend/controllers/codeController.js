@@ -1,4 +1,4 @@
-const giftCode = require("../models/giftCode.js");
+const giftCode = require("../models/Gift.js");
 const {generateCode} = require("../utils/generateCode.js");
 
 const createCode = async(req,res) => {
