@@ -20,6 +20,7 @@ interface GiftResponse {
   expiry: number;
   message: string;
   creator: string;
+  downloadUrl: string;
 }
 
 export default function CreateGiftCard() {
@@ -34,11 +35,11 @@ export default function CreateGiftCard() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Map token symbols to addresses (replace with actual addresses for your network)
+  // Map token symbols to addresses (Sepolia testnet)
   const tokenMap: Record<string, string> = {
-    USDT: "0x9092f9D0Ba4d2a027Cf7B6dD761C51cF893f2915", // Example: USDT on Ethereum mainnet
-    USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // Example: USDC on Ethereum mainnet
-    DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",  // Example: DAI on Ethereum mainnet
+    USDT: "0x9092f9D0Ba4d2a027Cf7B6dD761C51cF893f2915", // Test USDT on Sepolia
+    USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // Example, update for Sepolia
+    DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",  // Example, update for Sepolia
   };
 
   const tokens = Object.keys(tokenMap);
@@ -80,7 +81,7 @@ export default function CreateGiftCard() {
     try {
       const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
       const response = await axios.post("http://localhost:3000/api/createGift", {
-        token: tokenMap[form.token], // Send token address
+        token: tokenMap[form.token],
         amount: form.amount,
         expiry: expiryTimestamp,
         message: form.message,
@@ -88,8 +89,15 @@ export default function CreateGiftCard() {
       });
 
       if (response.data.success) {
-        setGift({ ...response.data.details, token: form.token }); // Store symbol for display
+        setGift({ ...response.data.details, token: form.token });
         setForm({ token: "USDT", amount: "", expiry: "", message: "" });
+        // Auto-trigger download
+        const link = document.createElement("a");
+        link.href = `http://localhost:3000${response.data.details.downloadUrl}`;
+        link.download = `${response.data.details.giftID}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       } else {
         setError(response.data.error || "Failed to create gift.");
       }
@@ -189,11 +197,20 @@ export default function CreateGiftCard() {
                     cardName: `Gift Card #${gift.giftID.slice(0, 4)}`,
                     status: "Pending",
                     amount: parseFloat(gift.amount),
-                    token: gift.token, // Use symbol for display
+                    token: gift.token,
                     expiry: format(new Date(gift.expiry * 1000), "yyyy-MM-dd"),
                     giftCode: gift.giftID,
                   }}
                 />
+              </div>
+              <div className="text-center mt-4">
+                <a
+                  href={`http://localhost:3000${gift.downloadUrl}`}
+                  download={`${gift.giftID}.png`}
+                  className="inline-block bg-[#9812C2] hover:bg-[#B315E6] text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200"
+                >
+                  Download Gift Card Image
+                </a>
               </div>
             </div>
           )}

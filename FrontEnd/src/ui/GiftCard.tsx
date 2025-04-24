@@ -57,12 +57,12 @@ type GiftCard = {
           </p>
         </div>
   
-        <div className="flex justify-between text-xs text-white/60 mb-1">
+        <div className="flex justify-between text-xl text-white/60 mb-1">
           <span>Gift Code:</span>
           <span>{giftCode}</span>
         </div>
   
-        <div className="flex justify-between text-xs text-white/60 mb-4">
+        <div className="flex justify-between text-[15px] text-white/60 mb-4">
           <span>Expires:</span>
           <span>{expiry}</span>
         </div>
