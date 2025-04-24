@@ -10,7 +10,7 @@ export function GenerateCard() {
         <div className="min-h-screen bg-[#0B0D3A] flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-[#101339] rounded-xl p-6 shadow-lg">
                 <h2 className="text-white text-xl font-semibold mb-6">
-                    Generate Card
+                    Create Gift Card
                 </h2>
 
                 {/* Select Token */}
