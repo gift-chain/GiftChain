@@ -4,3 +4,14 @@
 @theme{
   --color-figmablue: #1F1668
 }
+
+/* App.css */
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  overflow-x: hidden;
+}

@@ -5,6 +5,7 @@ import App from './App.tsx'
 import Layout from './ui/Layout.tsx';
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.tsx';
+import CreateGiftCard from './pages/CreateGiftCard.tsx';
 
 const RouterLayout = () => {
   return (
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
         path: "/dashboard",
         element: <Dashboard />,
       },
+      {
+        path: "/create-gift",
+        element: <CreateGiftCard/>
+      }
     ],
   },
 ]);
