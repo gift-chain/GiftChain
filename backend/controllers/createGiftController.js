@@ -1,5 +1,5 @@
 require("dotenv").config();
-const {ethers, keccak256, toUtf8Bytes} = require("ethers");
+const {ethers, keccak256, getAddress} = require("ethers");
 const giftAbi = require("../abi/giftABI.json")
 const {generateCode} = require("../utils/generateCode.js");
 
@@ -23,21 +23,59 @@ const giftChain = new ethers.Contract(process.env.GIFTCHAIN_ADDRESS, giftAbi, re
 const approvedTokens = new Set();
 
 // Function to approve token with max uint256
-async function approveToken(tokenAddress) {
-  if (approvedTokens.has(tokenAddress)) return;
-  
+async function approveToken(tokenAddress, spender) {
   try {
     const erc20 = new ethers.Contract(tokenAddress, ERC20_ABI, relayer);
     const maxUint256 = ethers.MaxUint256;
     
-    console.log(`Approving ${tokenAddress} for max amount...`);
-    const tx = await erc20.approve(giftChain.target, maxUint256);
-    await tx.wait();
-    console.log(`Approved ${tokenAddress} successfully`);
+    console.log(`Approving ${spender} to spend tokens at ${tokenAddress}...`);
     
-    approvedTokens.add(tokenAddress);
+    // Estimate gas for approval
+    const gasEstimate = await erc20.approve.estimateGas(spender, maxUint256);
+    const gasLimit = gasEstimate * BigInt(2); // Add 100% buffer
+    
+    const tx = await erc20.approve(spender, maxUint256, {
+      gasLimit: gasLimit
+    });
+    
+    console.log(`Approval transaction hash: ${tx.hash}`);
+    const receipt = await tx.wait();
+    console.log(`Approved successfully in block ${receipt.blockNumber}`);
+    
+    return true;
   } catch (err) {
-    console.error(`Failed to approve ${tokenAddress}:`, err);
+    console.error(`Failed to approve ${spender}:`, err);
+    throw err;
+  }
+}
+
+// Function to check and handle token approvals
+async function handleTokenApprovals(token, creator, amountBN) {
+  try {
+    const erc20 = new ethers.Contract(token, ERC20_ABI, relayer);
+    const decimals = await erc20.decimals();
+    
+    // Check creator's allowance to relayer
+    const creatorAllowance = await erc20.allowance(creator, relayer.address);
+    console.log('Creator allowance to relayer:', ethers.formatUnits(creatorAllowance, decimals));
+    
+    if (creatorAllowance < amountBN) {
+      throw new Error('Creator needs to approve relayer first');
+    }
+    
+    // Check relayer's allowance to GiftChain
+    const relayerAllowance = await erc20.allowance(relayer.address, giftChain.target);
+    console.log('Relayer allowance to GiftChain:', ethers.formatUnits(relayerAllowance, decimals));
+    
+    if (relayerAllowance < amountBN) {
+      console.log('Approving GiftChain to spend relayer tokens...');
+      await approveToken(token, giftChain.target);
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Token approval handling failed:', err);
+    throw err;
   }
 }
 
@@ -83,7 +121,7 @@ const createGift = async (req, res) => {
     // Validate addresses
     if (!ethers.isAddress(token)) {
       return res.status(400).json({ 
-        success: false,                  
+        success: false,
         error: 'Invalid token address',
         details: {
           token,
@@ -166,18 +204,12 @@ const createGift = async (req, res) => {
         });
       }
 
-      // Check allowance and approve if needed
-      const allowance = await erc20.allowance(creator, relayer.address);
-      console.log('Token allowance:', ethers.formatUnits(allowance, decimals));
-      
-      if (allowance < amountBN) {
-        // Auto-approve the token
-        await approveToken(token);
-      }
+      // Handle token approvals
+      await handleTokenApprovals(token, creator, amountBN);
 
       // Generate gift ID and hash creator
       const {rawCode, hashedCode} = generateCode();
-      const creatorHash = keccak256(toUtf8Bytes(creator));
+      const creatorHash = keccak256(getAddress(creator));
       console.log('Generated gift code:', rawCode);
       console.log('Hashed code:', hashedCode);
       console.log('Creator hash:', creatorHash);
@@ -185,10 +217,18 @@ const createGift = async (req, res) => {
       // Transfer tokens from creator to relayer
       try {
         console.log('Transferring tokens from creator to relayer...');
-        const pullTx = await erc20.transferFrom(creator, relayer.address, amountBN);
+        
+        // Estimate gas for transfer
+        const gasEstimate = await erc20.transferFrom.estimateGas(creator, relayer.address, amountBN);
+        const gasLimit = gasEstimate * BigInt(2); // Add 100% buffer
+        
+        const pullTx = await erc20.transferFrom(creator, relayer.address, amountBN, {
+          gasLimit: gasLimit
+        });
+        
         console.log('Transfer transaction hash:', pullTx.hash);
-        await pullTx.wait();
-        console.log('Transfer successful');
+        const receipt = await pullTx.wait();
+        console.log('Transfer successful in block', receipt.blockNumber);
       } catch (err) {
         console.error('Transfer failed:', err);
         return res.status(400).json({ 
@@ -208,13 +248,28 @@ const createGift = async (req, res) => {
       // Create the gift on-chain
       try {
         console.log('Creating gift on-chain...');
-        const giftTx = await giftChain.createGift(
+        
+        // Estimate gas for gift creation
+        const gasEstimate = await giftChain.createGift.estimateGas(
           token,                            // _token
           amountAfterFeeBN.toString(),      // _amount
           expiry.toString(),                // _expiry
           message,                          // _message
           hashedCode,                       // _giftID
           creatorHash                       // _creator
+        );
+        const gasLimit = gasEstimate * BigInt(2); // Add 100% buffer
+        
+        const giftTx = await giftChain.createGift(
+          token,                            // _token
+          amountAfterFeeBN.toString(),      // _amount
+          expiry.toString(),                // _expiry
+          message,                          // _message
+          hashedCode,                       // _giftID
+          creatorHash,                      // _creator
+          {
+            gasLimit: gasLimit
+          }
         );
         console.log('Gift transaction hash:', giftTx.hash);
         const receipt = await giftTx.wait();
