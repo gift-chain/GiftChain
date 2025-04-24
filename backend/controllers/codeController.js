@@ -15,7 +15,7 @@ const createCode = async(req,res) => {
             rawCode, hashedCode, senderAddress
         })
 
-        creatorCode.save();
+         creatorCode.save();
 
         res.status(200).json({rawCode, message: "code generated and save"});
     } catch (error) {
