@@ -64,7 +64,7 @@ contract GiftChain is ReentrancyGuard {
     if(gifts[_giftID].timeCreated != 0) revert GiftErrors.CARD_ALREADY_EXIST();
     IERC20 token = IERC20(_token);
 
-    if(!token.transferFrom(msg.sender, address(this), amount)) revert GiftErrors.TRANSFER_FAILED();
+    if(!token.transferFrom(msg.sender, address(this), _amount)) revert GiftErrors.TRANSFER_FAILED();
 
     gifts[_giftID] = Gift({
       token: _token,
@@ -81,18 +81,21 @@ contract GiftChain is ReentrancyGuard {
   }
 
 
-  function claimGift(bytes32 code) external nonReentrant {
-    Gift storage gift = gifts[code];
-
-    // gift must exist AND be in PENDING state (ready to claim)
-    require(gift.status == Status.PENDING, "Invalid gift code");
-
-    // gift must not be expired 
-    require(gift.expiry > block.timestamp, "Gift expired");
+  function claimGift(bytes32 giftID) external nonReentrant {
+    Gift storage gift = gifts[giftID];
 
     // validates the token and amount of gift
-    require(gift.token != address(0), "Invalid token");
-    require(gift.amount > 0, "Invalid amount");
+    if(gift.token == address(0)) revert GiftErrors.INVALID_GIFTID();
+    if(gift.amount == 0) revert GiftErrors.GIFT_NOT_CLAIMABLE();
+
+    // gift must exist AND be in PENDING state (ready to claim)
+    if(gift.status != Status.PENDING) revert GiftErrors.GIFT_CLAIMED();
+
+    // gift must not be expired 
+    if(gift.expiry < block.timestamp) revert GiftErrors.GIFT_EXPIRED();
+
+    if(gift.creator == keccak256(abi.encodePacked(msg.sender))) revert GiftErrors.CREATOR_CANNOT_CLAIM_GIFT();
+
 
     //update status before transfer 
     gift.status = Status.SUCCESSFUL; // gift successfully claimed
@@ -100,14 +103,45 @@ contract GiftChain is ReentrancyGuard {
     // transfer tokens
     IERC20(gift.token).safeTransfer(msg.sender, gift.amount);
 
-    emit GiftClaimed(code, msg.sender, gift.amount);
+    emit GiftClaimed(giftID, msg.sender, gift.amount);
 
   }
+  function reclaimGift(bytes32 giftID) external nonReentrant {
+    Gift storage gift = gifts[giftID];
+
+    if (gift.token == address(0)) {
+        revert GiftErrors.GiftNotFound();
+    }
+
+    // Validate sender is original creator
+    if (keccak256(abi.encodePacked(msg.sender)) != gift.creator) {
+        revert GiftErrors.NOT_AUTHORIZE_TO_RECLAIM_GIFT();
+    }
+
+    // Validate gift status
+    if (gift.status == Status.SUCCESSFUL) {
+        revert GiftErrors.GiftAlreadyRedeemed();
+    }
+    if (gift.status == Status.RECLAIMED) {
+        revert GiftErrors.GiftAlreadyReclaimed();
+    }
+    if (block.timestamp <= gift.expiry) {
+        revert GiftErrors.GIFT_NOT_EXPIRED_YET();
+    }
+
+    // Update state before transfer
+    gift.status = Status.RECLAIMED;
+    gift.claimed = true;
+
+    // Transfer ERC20 tokens back to creator
+    IERC20(gift.token).safeTransfer(msg.sender, gift.amount);
+
+    emit GiftReclaimed(giftID, msg.sender, gift.amount);
+}
   // Working on validating gift
 
-  function validateGift(string calldata rawCode) external view returns (bool){
-    bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
-    Gift memory gift = gifts[codeHash];
+  function validateGift(bytes32 giftID) external view returns (bool){
+    Gift memory gift = gifts[giftID];
 
     if(gift.token == address(0)){
       revert GiftErrors.GiftNotFound();
@@ -128,41 +162,4 @@ contract GiftChain is ReentrancyGuard {
     return true;
 
   }
-
-  function reclaimGift(string calldata rawCode) external nonReentrant {
-    bytes32 codeHash = keccak256(abi.encodePacked(rawCode));
-    Gift storage gift = gifts[codeHash];
-
-    if (gift.token == address(0)) {
-        revert GiftErrors.GiftNotFound();
-    }
-
-    // Validate sender is original creator
-    if (keccak256(abi.encodePacked(msg.sender)) != gift.creator) {
-        revert GiftErrors.InvalidGiftStatus();
-    }
-
-    // Validate gift status
-    if (gift.status == Status.SUCCESSFUL) {
-        revert GiftErrors.GiftAlreadyRedeemed();
-    }
-    if (gift.status == Status.RECLAIMED) {
-        revert GiftErrors.GiftAlreadyReclaimed();
-    }
-    if (block.timestamp <= gift.expiry) {
-        revert GiftErrors.InvalidGiftStatus();
-    }
-
-    // Update state before transfer
-    gift.status = Status.RECLAIMED;
-    gift.claimed = true;
-
-    // Transfer ERC20 tokens back to creator
-    IERC20(gift.token).safeTransfer(msg.sender, gift.amount);
-
-    emit GiftReclaimed(codeHash, msg.sender, gift.amount);
-}
-
-
-
 }
