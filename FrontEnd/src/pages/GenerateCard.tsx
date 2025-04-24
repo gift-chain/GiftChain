@@ -103,5 +103,3 @@ export function GenerateCard() {
         </div>
     );
 }
-
-export default GenerateCard; 
