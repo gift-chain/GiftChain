@@ -30,10 +30,10 @@ const router = createBrowserRouter([
         element: <App />,
       },
       {
-
         path: "/generate-card",
         element: <GenerateCard />,
-
+      },
+      {
         path: "/dashboard",
         element: <Dashboard />,
       },
