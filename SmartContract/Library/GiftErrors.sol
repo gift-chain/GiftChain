@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 library GiftErrors {
+    error ONLY_RELAYER_HAS_ACCESS();
     error INVALID_ADDRESS();
     error INVALID_AMOUNT();
     error EXPIRY_CAN_ONLY_BE_IN_FUTURE();
@@ -13,4 +14,5 @@ library GiftErrors {
     error GiftAlreadyReclaimed();
     error InvalidGiftStatus();
     error GiftNotFound();
+    error GiftExpired();
 }

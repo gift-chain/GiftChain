@@ -11,6 +11,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {children}
             <Footer />
             {/* <Toaster
+                position="bottom-right"
+                reverseOrder={false}
+                gutter={8}
+                containerClassName=""
+                toastOptions={{
+                    style: {
+                        backgroundColor: "black",
+                        color: "white",
+                    },
+                }}
+            {/* <Toaster
         position="bottom-right"
         reverseOrder={false}
         gutter={8}
