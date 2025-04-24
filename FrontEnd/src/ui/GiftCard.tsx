@@ -46,6 +46,7 @@ export const GiftCard = ({ card }: GiftCardProps) => {
         />
       </div>
 
+
       <p className="text-xs uppercase text-white/70 mb-1">Gift Balance</p>
       <div className="flex items-center gap-2 mb-6">
         <img src={iconSrc} alt={token} className="w-6 h-6" />

@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+require('dotenv').config();
+
 
 const mongoose = require("mongoose");
 const codeRoutes = require("./routes/codeRoutes.js");
@@ -31,7 +33,7 @@ app.get("/", (req, res) => {
   res.json("GiftChain backend is live");
 });
 
-app.post("/create-gift", createGift);
+// app.post("/create-gift", createGift);
 
 app.listen(PORT, () => {
   console.log(`✅ Backend running at PORT ${PORT}...`);
