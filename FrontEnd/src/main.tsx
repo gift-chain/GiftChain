@@ -4,6 +4,7 @@ import './App.css'
 import App from './App.tsx'
 import Layout from './ui/Layout.tsx';
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
+import Dashboard from './pages/Dashboard.tsx';
 
 const RouterLayout = () => {
   return (
@@ -24,10 +25,10 @@ const router = createBrowserRouter([
         path: "/",
         element: <App />,
       },
-      // {
-      //   path: "/",
-      //   element: ,
-      // },
+      {
+        path: "/dashboard",
+        element: <Dashboard />,
+      },
     ],
   },
 ]);
