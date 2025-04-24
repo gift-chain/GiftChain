@@ -99,7 +99,7 @@ export function GenerateCard() {
 
 
                 {/* Preview Card */}
-                <div className="w-full h-40 bg-gradient-to-tr from-[#3E236A] to-[#582FA1] rounded-lg flex items-center justify-center overflow-hidden mt-6">
+                <div className="w-full h-50  rounded-lg flex items-center justify-center overflow-hidden mt-6">
                     <img
                         src={giftcard}
                         alt="Card Preview"
