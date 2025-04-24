@@ -4,6 +4,7 @@ import giftcard from '../assets/giftcard.png';
 export function GenerateCard() {
     const [token, setToken] = useState('');
     const [amount, setAmount] = useState('');
+    const [expiry, setExpiry] = useState('');
 
     return (
         <div className="min-h-screen bg-[#0B0D3A] flex items-center justify-center p-4">
@@ -21,7 +22,7 @@ export function GenerateCard() {
                         <select
                             value={token}
                             onChange={e => setToken(e.target.value)}
-                            className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white appearance-none focus:outline-none"
+                            className="w-full bg-[#101339] border border-white rounded-lg px-4 py-3 text-white appearance-none focus:outline-none"
                         >
                             <option value="" disabled>
                                 Select token
@@ -62,6 +63,19 @@ export function GenerateCard() {
                         className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white placeholder-white focus:outline-none"
                     />
                 </div>
+
+{/* Expiration Input */}
+<div className="mb-4">
+  <label className="block text-white text-sm mb-1">
+    Set Expiration
+  </label>
+  <input
+    type="datetime-local"
+    value={expiry}
+    onChange={e => setExpiry(e.target.value)}
+    className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white placeholder-white focus:outline-none"
+  />
+</div>
 
                 {/* Write a note */}
                 <div className="mb-4">
