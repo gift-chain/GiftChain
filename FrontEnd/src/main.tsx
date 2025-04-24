@@ -4,7 +4,13 @@ import './App.css'
 import App from './App.tsx'
 import Layout from './ui/Layout.tsx';
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
+
+import { GenerateCard } from './pages/GenerateCard.tsx';
+// import { GiftCard } from './ui/GiftCard.tsx';
+
 import Dashboard from './pages/Dashboard.tsx';
+import { Gift } from 'lucide-react';
+
 
 const RouterLayout = () => {
   return (
@@ -26,9 +32,17 @@ const router = createBrowserRouter([
         element: <App />,
       },
       {
+        path: "/generate-card",
+        element: <GenerateCard />,
+      },
+      {
         path: "/dashboard",
         element: <Dashboard />,
       },
+      // {
+      //   path: "/claim-card",
+      //   element: <GiftCard />,
+      // },
     ],
   },
 ]);
