@@ -44,8 +44,8 @@ const Home = () => {
             <Container className="">
                 <div className="flex justify-center items-center gap-5">
                     <div className="">
-                        <h2 className="text-3xl font-bold text-white">Give the Gift of Crypto without the <br /> Complexity  No Wallet Address Needed.</h2>
-                        <p className="text-white">GiftChain lets you send crypto as easily as a message  simple, secure, and personal.</p>
+                        <h1 className="text-5xl font-bold text-white mb-3"> Crypto Gifting Made Easy </h1> 
+                        <p className="text-white text-lg">No wallet address needed. Securely send digital assets as effortlessly as a text.</p>
                         <div className="flex mt-10 gap-3">
                             <Button title="Create Gift  Card" className="bg-[#9812C2] text-white" path="/generate-card" />
                             <Button title="Claim Gift Card" className="border-[#9812C2] text-white border-2 " path="/about" />

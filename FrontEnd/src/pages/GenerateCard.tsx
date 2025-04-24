@@ -22,7 +22,7 @@ export function GenerateCard() {
                         <select
                             value={token}
                             onChange={e => setToken(e.target.value)}
-                            className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white appearance-none focus:outline-none"
+                            className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-sm text-white appearance-none focus:outline-none"
                         >
                             <option value="" disabled className="text-[#d9d9d9] text-sm opacity-50">
                                 Select token
@@ -66,7 +66,7 @@ export function GenerateCard() {
                         value={amount}
                         onChange={e => setAmount(e.target.value)}
                         placeholder="Enter amount"
-                        className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white placeholder-white focus:outline-none"
+                        className="w-full bg-transparent border border-white rounded-lg text-sm px-4 py-3 text-white placeholder-white focus:outline-none"
                     />
                 </div>
 
@@ -79,7 +79,7 @@ export function GenerateCard() {
                         type="datetime-local"
                         value={expiry}
                         onChange={e => setExpiry(e.target.value)}
-                        className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white placeholder-white focus:outline-none"
+                        className="w-full bg-transparent border border-white text-sm rounded-lg px-4 py-3 text-white placeholder-white focus:outline-none"
                     />
                 </div>
 
@@ -93,7 +93,7 @@ export function GenerateCard() {
                         // value={amount}
                         // onChange={e => setAmount(e.target.value)}
                         placeholder="Write a note (optional)"
-                        className="w-full bg-transparent border border-white rounded-lg px-4 py-12 text-white placeholder-white focus:outline-none"
+                        className="w-full bg-transparent border border-white rounded-lg text-sm px-4 py-12 text-white placeholder-white focus:outline-none"
                     />
                 </div>
 
