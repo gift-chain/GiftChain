@@ -9,6 +9,7 @@ import { GenerateCard } from './pages/GenerateCard.tsx';
 // import { GiftCard } from './ui/GiftCard.tsx';
 
 import Dashboard from './pages/Dashboard.tsx';
+import CreateGiftCard from './pages/CreateGiftCard.tsx';
 import { Gift } from 'lucide-react';
 
 
@@ -39,10 +40,10 @@ const router = createBrowserRouter([
         path: "/dashboard",
         element: <Dashboard />,
       },
-      // {
-      //   path: "/claim-card",
-      //   element: <GiftCard />,
-      // },
+      {
+        path: "/create-gift",
+        element: <CreateGiftCard/>
+      }
     ],
   },
 ]);
