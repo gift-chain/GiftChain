@@ -64,18 +64,18 @@ export function GenerateCard() {
                     />
                 </div>
 
-{/* Expiration Input */}
-<div className="mb-4">
-  <label className="block text-white text-sm mb-1">
-    Set Expiration
-  </label>
-  <input
-    type="datetime-local"
-    value={expiry}
-    onChange={e => setExpiry(e.target.value)}
-    className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white placeholder-white focus:outline-none"
-  />
-</div>
+                {/* Expiration Input */}
+                <div className="mb-4">
+                    <label className="block text-white text-sm mb-1">
+                        Set Expiration
+                    </label>
+                    <input
+                        type="datetime-local"
+                        value={expiry}
+                        onChange={e => setExpiry(e.target.value)}
+                        className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white placeholder-white focus:outline-none"
+                    />
+                </div>
 
                 {/* Write a note */}
                 <div className="mb-4">
@@ -97,7 +97,7 @@ export function GenerateCard() {
                     <img
                         src={giftcard}
                         alt="Card Preview"
-                        className="object-cover w-full h-full rounded-lg" 
+                        className="object-cover w-full h-full rounded-lg"
                     />
                 </div>
 
