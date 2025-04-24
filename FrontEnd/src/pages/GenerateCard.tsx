@@ -93,7 +93,7 @@ export function GenerateCard() {
                     className="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-3 rounded-lg transition mt-6"
                     onClick={() => {
                         /* placeholder handler */
-                        console.log('Creating gift card:', { token, amount, optionalToken });
+                        console.log('Creating gift card:', { token, amount });
                     }}
                 >
                     Create Gift Card
