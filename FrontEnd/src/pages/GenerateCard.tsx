@@ -7,8 +7,8 @@ export function GenerateCard() {
     const [expiry, setExpiry] = useState('');
 
     return (
-        <div className="min-h-screen bg-[#0B0D3A] flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-[#101339] rounded-xl p-6 shadow-lg">
+        <div className="min-h-screen bg-[#1F1668] flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-[#041259]/40 rounded-xl p-6 shadow-lg">
                 <h2 className="text-white text-xl font-semibold mb-6">
                     Create Gift Card
                 </h2>
@@ -22,14 +22,20 @@ export function GenerateCard() {
                         <select
                             value={token}
                             onChange={e => setToken(e.target.value)}
-                            className="w-full bg-[#101339] border border-white rounded-lg px-4 py-3 text-white appearance-none focus:outline-none"
+                            className="w-full bg-transparent border border-white rounded-lg px-4 py-3 text-white appearance-none focus:outline-none"
                         >
-                            <option value="" disabled>
+                            <option value="" disabled className="text-[#d9d9d9] text-sm opacity-50">
                                 Select token
                             </option>
-                            <option value="lsk">Lisk</option>
-                            <option value="eth">Ethereum</option>
-                            <option value="matic">Polygon</option>
+                            <option value="lsk" className="bg-[#101339] text-white">
+                                Lisk
+                            </option>
+                            <option value="eth" className="bg-[#101339] text-white">
+                                Ethereum
+                            </option>
+                            <option value="matic" className="bg-[#101339] text-white">
+                                Polygon
+                            </option>
                         </select>
                         {/* Dropdown arrow SVG */}
                         <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center">
