@@ -285,13 +285,13 @@ const createGift = async (req, res) => {
       const symbol = await erc20.symbol();
       console.log("Token symbol:", symbol);
       const amountBN = ethers.parseUnits(amount.toString(), decimals);
-      const feeBN = amountBN / BigInt(100);
-      const amountAfterFeeBN = amountBN - feeBN;
+      // const feeBN = amountBN / BigInt(100); // 1% fee
+      // const amountAfterFeeBN = amountBN - feeBN;
 
       console.log(`[AMOUNT] Breakdown:
         Original: ${ethers.formatUnits(amountBN, decimals)} ${symbol}
-        Fee (1%): ${ethers.formatUnits(feeBN, decimals)} ${symbol}
-        After fee: ${ethers.formatUnits(amountAfterFeeBN, decimals)} ${symbol}`);
+        // Fee (1%): ${ethers.formatUnits(feeBN, decimals)} ${symbol}
+        // After fee: ${ethers.formatUnits(amountAfterFeeBN, decimals)} ${symbol}`);
 
       const balance = await erc20.balanceOf(creator);
       console.log("Creator balance:", ethers.formatUnits(balance, decimals));
@@ -403,24 +403,26 @@ const createGift = async (req, res) => {
       try {
         console.log("Creating gift on-chain...");
         const gasEstimate = await giftChain.createGift.estimateGas(
-          token,
-          amountAfterFeeBN.toString(),
-          expiry.toString(),
-          message,
-          hashedCode,
-          creatorHash
+          token,                            // _token
+          amountBN.toString(),              // _amount
+          expiry.toString(),                // _expiry
+          message,                          // _message
+          hashedCode,                       // _giftID
+          creatorHash                       // _creator
         );
         const gasLimit = (gasEstimate * BigInt(2)).toString();
         console.log("Gas estimate for gift creation:", gasEstimate.toString());
 
         const giftTx = await giftChain.createGift(
-          token,
-          amountAfterFeeBN.toString(),
-          expiry.toString(),
-          message,
-          hashedCode,
-          creatorHash,
-          { gasLimit }
+          token,                            // _token
+          amountBN.toString(),              // _amount
+          expiry.toString(),                // _expiry
+          message,                          // _message
+          hashedCode,                       // _giftID
+          creatorHash,                      // _creator
+          {
+            gasLimit: gasLimit
+          }
         );
         console.log("Gift transaction hash:", giftTx.hash);
         const receipt = await giftTx.wait();
