@@ -8,11 +8,9 @@ type User @entity(immutable: true) {
   id: Bytes!
   gifts: [Gift!]! @derivedFrom(field: "creator")
   giftsCreated: [GiftCreated!]! @derivedFrom(field: "creator")
-  # giftsClaimed: [GiftClaimed!]! @derivedFrom(field: "recipient")
-  # giftsReclaimed: [GiftReclaimed!]! @derivedFrom(field: "creator")
 }
 
-type Gift @entity(immutable: true) {
+type Gift @entity(immutable: false) {
   id: Bytes! # bytes32
   creator: User! # address
   token: Bytes! # address
@@ -21,11 +19,13 @@ type Gift @entity(immutable: true) {
   expiry: BigInt! # uint256
   timeCreated: BigInt! # uint256
   status: GiftStatus!
+  claimed: GiftClaimed @derivedFrom(field: "gift")
+  reclaimed: GiftReclaimed @derivedFrom(field: "gift")
 }
 
 type GiftClaimed @entity(immutable: true) {
   id: ID!
-  giftID: Bytes!
+  gift: Gift!
   recipient: Bytes!
   amount: BigInt!
   blockNumber: BigInt!
@@ -49,7 +49,7 @@ type GiftCreated @entity(immutable: true) {
 
 type GiftReclaimed @entity(immutable: true) {
   id: ID!
-  giftID: Bytes!
+  gift: Gift!
   creator: Bytes!
   amount: BigInt!
   blockNumber: BigInt!
