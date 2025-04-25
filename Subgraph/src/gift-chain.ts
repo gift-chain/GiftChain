@@ -62,7 +62,7 @@ export function handleGiftClaimed(event: GiftClaimedEvent): void {
   let entity = new GiftClaimed(getIdFromEventParams(event.params.giftID, event.params.recipient))
   // let recipient = getOrCreateUser(event.params.recipient)
 
-  entity.giftID = event.params.giftID
+  entity.gift = gift!.id
   entity.recipient = event.params.recipient
   entity.amount = event.params.amount
   entity.blockNumber = event.block.number
@@ -82,8 +82,9 @@ export function handleGiftReclaimed(event: GiftReclaimedEvent): void {
   let entity = new GiftReclaimed(getIdFromEventParams(event.params.giftID, event.params.creator))
   // let creator = getOrCreateUser(event.params.creator)
 
-  entity.giftID = event.params.giftID
+  entity.gift = gift!.id
   entity.creator = event.params.creator
+  
   entity.amount = event.params.amount
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
