@@ -7,6 +7,14 @@ import ValidateGift from './ui/ValidateGift.tsx';
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
 import ReclaimGift from './ui/ReclaimGift.tsx';
 
+import { GenerateCard } from './pages/GenerateCard.tsx';
+// import { GiftCard } from './ui/GiftCard.tsx';
+
+import Dashboard from './pages/Dashboard.tsx';
+import CreateGiftCard from './pages/CreateGiftCard.tsx';
+import { Gift } from 'lucide-react';
+
+
 const RouterLayout = () => {
   return (
 
@@ -40,6 +48,18 @@ const router = createBrowserRouter([
         path: "/reclaimGift",
         element: <ReclaimGift /> ,
       },
+      {
+        path: "/generate-card",
+        element: <GenerateCard />,
+      },
+      {
+        path: "/dashboard",
+        element: <Dashboard />,
+      },
+      {
+        path: "/create-gift",
+        element: <CreateGiftCard/>
+      }
     ],
   },
 ]);

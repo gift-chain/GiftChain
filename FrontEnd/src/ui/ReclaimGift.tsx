@@ -9,6 +9,7 @@ const ReclaimGift = () => {
 export default ReclaimGift
 
 
+
 // import React, { useState } from 'react';
 // import { ethers } from 'ethers';
 // import axios from 'axios';
@@ -52,7 +53,7 @@ export default ReclaimGift
 
 //   const validateGift = async (rawCode: string): Promise<GiftDetails> => {
 //     try {
-//       const response = await axios.post('http://localhost:3000/api/gifts/validate', {
+//       const response = await axios.post('/api/gifts/validate', {
 //         code: rawCode,
 //         walletAddress
 //       });
@@ -155,7 +156,7 @@ export default ReclaimGift
 //     try {
 //       setIsSubmitting(true);
       
-//       const response = await axios.post('http://localhost:3000/api/gifts/reclaim', {
+//       const response = await axios.post('/api/gifts/reclaim', {
 //         code,
 //         walletAddress
 //       });
@@ -179,8 +180,6 @@ export default ReclaimGift
 //       });
 //     }
 //   };
-
-//   const isCreator = giftDetails?.creator?.toLowerCase() === walletAddress.toLowerCase();
 
 //   return (
 //     <div className="min-h-screen bg-gradient-to-b from-indigo-900 to-purple-900 flex items-center justify-center p-4">
@@ -280,7 +279,9 @@ export default ReclaimGift
 //                 <div className="mb-4">
 //                   <h4 className="text-indigo-200 text-sm mb-1">Creator</h4>
 //                   <p className="text-white text-sm truncate">
-//                     {isCreator ? 'You (matched)' : 'Not matched'}
+//                     {giftDetails.creator === ethers.utils.id(walletAddress) 
+//                       ? 'You (matched)' 
+//                       : 'Not matched'}
 //                   </p>
 //                 </div>
 //               )}

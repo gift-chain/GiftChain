@@ -6,6 +6,7 @@ function generateCode() {
   const rawCode = randomCode.match(/.{1,4}/g).join("-");
   const hashedCode = keccak256(toUtf8Bytes(rawCode));
 
+  
   return {
     rawCode,
     hashedCode,

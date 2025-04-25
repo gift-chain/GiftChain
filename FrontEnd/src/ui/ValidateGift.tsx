@@ -8,7 +8,9 @@ const ValidateGift = () => {
 
 export default ValidateGift
 
-// import React, { useState, useEffect } from 'react';
+
+
+// import React, { useState } from 'react';
 // import { ethers } from 'ethers';
 // import axios from 'axios';
 // import { useWeb3React } from '@web3-react/core';
@@ -46,32 +48,20 @@ export default ValidateGift
 // }
 
 // const injected = new InjectedConnector({
-//   supportedChainIds: [1, 3, 4, 5, 42, 1337] // Added 1337 for local development
+//   supportedChainIds: [1, 3, 4, 5, 42] // Add your supported chain IDs
 // });
 
 // const CryptoGiftValidation: React.FC = () => {
-//   const { activate, account, active, library } = useWeb3React();
+//   const { activate, account, active } = useWeb3React();
 //   const [code, setCode] = useState<string>('');
 //   const [errors, setErrors] = useState<ValidationErrors>({});
 //   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 //   const [giftDetails, setGiftDetails] = useState<GiftDetails | null>(null);
 //   const [loading, setLoading] = useState<boolean>(false);
 
-//   useEffect(() => {
-//     const connectWallet = async () => {
-//       try {
-//         await activate(injected);
-//       } catch (error) {
-//         console.error('Error connecting wallet:', error);
-//       }
-//     };
-    
-//     connectWallet();
-//   }, [activate]);
-
 //   const validateGift = async (rawCode: string): Promise<GiftDetails> => {
 //     try {
-//       const response = await axios.post('http://localhost:3000/api/gifts/validate', {
+//       const response = await axios.post('/api/gifts/validate', {
 //         code: rawCode,
 //         walletAddress: account
 //       });
@@ -177,7 +167,7 @@ export default ValidateGift
 //   };
 
 //   const handleClaimGift = async () => {
-//     if (!active || !account) {
+//     if (!active) {
 //       alert('Please connect your wallet first');
 //       return;
 //     }
@@ -190,7 +180,7 @@ export default ValidateGift
 //     try {
 //       setIsSubmitting(true);
       
-//       const response = await axios.post('http://localhost:3000/api/gifts/claim', {
+//       const response = await axios.post('/api/gifts/claim', {
 //         code,
 //         walletAddress: account
 //       });
