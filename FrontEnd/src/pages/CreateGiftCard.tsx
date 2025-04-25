@@ -81,7 +81,7 @@ export default function CreateGiftCard() {
 
     try {
       const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
-      const response = await axios.post('http://localhost:3000/api/createGift', {
+      const response = await axios.post('http://localhost:3000/api/create-gift', {
         token: tokenMap[form.token],
         amount: form.amount,
         expiry: expiryTimestamp,
