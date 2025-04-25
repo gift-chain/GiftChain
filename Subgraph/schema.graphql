@@ -1,0 +1,58 @@
+enum GiftStatus {
+  PENDING
+  CLAIMED
+  RECLAIMED
+}
+
+type User @entity(immutable: true) {
+  id: Bytes!
+  gifts: [Gift!]! @derivedFrom(field: "creator")
+  giftsCreated: [GiftCreated!]! @derivedFrom(field: "creator")
+  giftsClaimed: [GiftClaimed!]! @derivedFrom(field: "recipient")
+  giftsReclaimed: [GiftReclaimed!]! @derivedFrom(field: "creator")
+}
+
+type Gift @entity(immutable: true) {
+  id: Bytes! # bytes32
+  creator: User! # address
+  token: Bytes! # address
+  message: String! # string
+  amount: BigInt! # uint256
+  expiry: BigInt! # uint256
+  timeCreated: BigInt! # uint256
+  status: GiftStatus!
+}
+
+type GiftClaimed @entity(immutable: true) {
+  id: ID!
+  giftID: Bytes!
+  recipient: User!
+  amount: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type GiftCreated @entity(immutable: true) {
+  id: ID!
+  giftID: Bytes!
+  creator: User!
+  token: Bytes!
+  message: String!
+  amount: BigInt!
+  expiry: BigInt!
+  timeCreated: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type GiftReclaimed @entity(immutable: true) {
+  id: ID!
+  giftID: Bytes!
+  creator: User!
+  amount: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
