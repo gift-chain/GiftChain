@@ -179,13 +179,13 @@ const createGift = async (req, res) => {
       const symbol = await erc20.symbol();
       console.log('Token symbol:', symbol);
       const amountBN = ethers.parseUnits(amount.toString(), decimals);
-      const feeBN = amountBN / BigInt(100); // 1% fee
-      const amountAfterFeeBN = amountBN - feeBN;
+      // const feeBN = amountBN / BigInt(100); // 1% fee
+      // const amountAfterFeeBN = amountBN - feeBN;
 
       console.log(`[AMOUNT] Breakdown:
         Original: ${ethers.formatUnits(amountBN, decimals)} ${symbol}
-        Fee (1%): ${ethers.formatUnits(feeBN, decimals)} ${symbol}
-        After fee: ${ethers.formatUnits(amountAfterFeeBN, decimals)} ${symbol}`);
+        // Fee (1%): ${ethers.formatUnits(feeBN, decimals)} ${symbol}
+        // After fee: ${ethers.formatUnits(amountAfterFeeBN, decimals)} ${symbol}`);
 
       // Check creator's balance
       const balance = await erc20.balanceOf(creator);
@@ -252,7 +252,7 @@ const createGift = async (req, res) => {
         // Estimate gas for gift creation
         const gasEstimate = await giftChain.createGift.estimateGas(
           token,                            // _token
-          amountAfterFeeBN.toString(),      // _amount
+          amountBN.toString(),              // _amount
           expiry.toString(),                // _expiry
           message,                          // _message
           hashedCode,                       // _giftID
@@ -262,7 +262,7 @@ const createGift = async (req, res) => {
         
         const giftTx = await giftChain.createGift(
           token,                            // _token
-          amountAfterFeeBN.toString(),      // _amount
+          amountBN.toString(),              // _amount
           expiry.toString(),                // _expiry
           message,                          // _message
           hashedCode,                       // _giftID

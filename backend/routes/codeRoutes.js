@@ -4,6 +4,6 @@ const { createCode } = require("../controllers/codeController");
 const {createGift} = require("../controllers/createGiftController");
 
 router.post("/generate-code", createCode);
-router.post("/createGift", createGift)
+router.post("/create-gift", createGift)
 
 module.exports = router;
