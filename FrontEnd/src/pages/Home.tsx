@@ -93,7 +93,7 @@ const Home = () => {
               <Button
                 title="Claim Gift Card"
                 className="border-[#9812C2] text-white border-2"
-                path="/about"
+                path="/claim-gift"
               />
               {isConnected && (
                 <Button

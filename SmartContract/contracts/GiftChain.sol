@@ -34,18 +34,37 @@ contract GiftChain is ReentrancyGuard {
   enum Status {
     NONE,
     PENDING,
-    SUCCESSFUL,
+    CLAIMED,
     RECLAIMED
   }
 
   mapping (bytes32 => Gift) public gifts;
 
 
-  event GiftClaimed(bytes32 indexed code, address indexed recipient, uint256 amount);
+  event GiftClaimed(
+    bytes32 indexed giftID, 
+    address indexed recipient, 
+    uint256 amount, 
+    string status
+  );
 
-  event GiftCreated(bytes32 indexed, address indexed, string indexed, uint256, uint256);
+  event GiftCreated(
+    bytes32 indexed giftID,
+    bytes32 indexed creator, 
+    address indexed token, 
+    string message, 
+    uint256 amount, 
+    uint256 expiry,
+    uint256 timeCreated,
+    string status
+  );
 
-  event GiftReclaimed(bytes32 indexed code, address indexed recipient, uint256 amount);
+  event GiftReclaimed(
+    bytes32 indexed giftID, 
+    address indexed recipient, 
+    uint256 amount, 
+    string status
+  );
 
 
   constructor(address _relayer) {
@@ -86,7 +105,7 @@ contract GiftChain is ReentrancyGuard {
       creator: _creator
     });
 
-    emit GiftCreated(_giftID, _token, _message, _amount, _expiry);
+    emit GiftCreated(_giftID, _creator, _token, _message, _amount, _expiry, block.timestamp, "PENDING");
   }
 
 
@@ -107,12 +126,12 @@ contract GiftChain is ReentrancyGuard {
 
 
     //update status before transfer 
-    gift.status = Status.SUCCESSFUL; // gift successfully claimed
+    gift.status = Status.CLAIMED; // gift successfully claimed
 
     // transfer tokens
     IERC20(gift.token).safeTransfer(msg.sender, gift.amount);
 
-    emit GiftClaimed(giftID, msg.sender, gift.amount);
+    emit GiftClaimed(giftID, msg.sender, gift.amount, "CLAIMED");
 
   }
   function reclaimGift(bytes32 giftID) external nonReentrant {
@@ -128,7 +147,7 @@ contract GiftChain is ReentrancyGuard {
     }
 
     // Validate gift status
-    if (gift.status == Status.SUCCESSFUL) {
+    if (gift.status == Status.CLAIMED) {
         revert GiftErrors.GiftAlreadyRedeemed();
     }
     if (gift.status == Status.RECLAIMED) {
@@ -145,7 +164,7 @@ contract GiftChain is ReentrancyGuard {
     // Transfer ERC20 tokens back to creator
     IERC20(gift.token).safeTransfer(msg.sender, gift.amount);
 
-    emit GiftReclaimed(giftID, msg.sender, gift.amount);
+    emit GiftReclaimed(giftID, msg.sender, gift.amount, "RECLAIMED");
 }
   // Working on validating gift
 
@@ -156,6 +175,9 @@ contract GiftChain is ReentrancyGuard {
       revert GiftErrors.GiftNotFound();
     }
 
+    if(gift.status == Status.CLAIMED){
+      revert GiftErrors.GiftAlreadyRedeemed();
+    }
     enum Status {
         NONE,
         PENDING,

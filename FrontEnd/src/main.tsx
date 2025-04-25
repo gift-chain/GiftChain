@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './App.css'
 import App from './App.tsx'
 import Layout from './ui/Layout.tsx';
-import ValidateGift from './ui/ValidateGift.tsx';
+import ValidateGift from './pages/ValidateGift.tsx';
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
-import ReclaimGift from './ui/ReclaimGift.tsx';
+import ClaimGift from './pages/ClaimGift.tsx';
+import ReclaimGift from './pages/ReclaimGift.tsx';
 
 // import { GenerateCard } from './pages/GenerateCard.tsx';
 // import { GiftCard } from './ui/GiftCard.tsx';
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
       {
         path: "/create-gift",
         element: <CreateGiftCard/>
+      },
+      {
+        path: "/claim-gift",
+        element: <ClaimGift/>
       }
     ],
   },

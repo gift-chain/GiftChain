@@ -28,8 +28,14 @@ const ValidateGift: React.FC = () => {
   const validateGift = async (rawCode: string): Promise<ValidationResult> => {
     try {
       console.log('Validating gift code:', rawCode);
+      // Compute the expected codeHash for debugging
+      const codeHash = ethers.keccak256(ethers.toUtf8Bytes(rawCode));
+      console.log('Computed codeHash:', codeHash);
+
+      // Call validateGift with the raw code
       const isValid = await contract.validateGift(rawCode);
       console.log('Validation result:', isValid);
+
       return {
         isValid,
         message: isValid ? 'Gift card is valid!' : 'Gift card is invalid.',
@@ -37,23 +43,27 @@ const ValidateGift: React.FC = () => {
     } catch (error: any) {
       console.error('Validation error:', error);
       let errorMessage = 'An unknown error occurred.';
-      if (error.reason) {
-        console.log('Error reason:', error.reason);
-        if (error.reason.includes('GiftNotFound')) {
+      
+      // Handle specific revert reasons
+      if (error.reason || error.data?.message) {
+        const reason = error.reason || error.data?.message;
+        console.log('Error reason:', reason);
+        if (reason.includes('GiftNotFound')) {
           errorMessage = 'Gift card not found. Please check your code.';
-        } else if (error.reason.includes('GiftAlreadyRedeemed')) {
+        } else if (reason.includes('GiftAlreadyRedeemed')) {
           errorMessage = 'This gift card has already been redeemed.';
-        } else if (error.reason.includes('GiftAlreadyReclaimed')) {
+        } else if (reason.includes('GiftAlreadyReclaimed')) {
           errorMessage = 'This gift card has been reclaimed by the sender.';
-        } else if (error.reason.includes('InvalidGiftStatus')) {
+        } else if (reason.includes('InvalidGiftStatus')) {
           errorMessage = 'This gift card is expired or has an invalid status.';
         } else {
-          errorMessage = `Contract error: ${error.reason}`;
+          errorMessage = `Contract error: ${reason}`;
         }
       } else if (error.message) {
         console.log('Error message:', error.message);
         errorMessage = `Provider error: ${error.message}`;
       }
+
       return {
         isValid: false,
         message: errorMessage,
@@ -78,10 +88,10 @@ const ValidateGift: React.FC = () => {
       } else {
         setErrors({ code: undefined });
       }
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false);
       console.error('Unexpected error validating code:', error);
-      setErrors({ code: 'Unexpected error validating code on blockchain' });
+      setErrors({ code: `Unexpected error: ${error.message || 'Unknown error'}` });
     }
   };
 
@@ -115,7 +125,7 @@ const ValidateGift: React.FC = () => {
     } catch (error: any) {
       console.error('Error claiming gift:', error);
       setErrors({
-        code: error.reason || 'Transaction failed. Please try again.',
+        code: error.reason || error.message || 'Transaction failed. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -139,7 +149,7 @@ const ValidateGift: React.FC = () => {
                 setValidationResult(null);
               }}
               className="w-full bg-indigo-900/50 text-white rounded-l-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="Enter gift code"
+              placeholder="Enter gift code (e.g., c2f1-eb68-edd1-89ba)"
             />
             <button
               type="button"
@@ -213,7 +223,7 @@ const ValidateGift: React.FC = () => {
           <p className="mb-1">Test codes:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>
-              <code className="bg-indigo-900/50 px-1 rounded">VALID123</code> - Valid gift card
+              <code className="bg-indigo-900/50 px-1 rounded">c2f1-eb68-edd1-89ba</code> - Valid gift card
             </li>
             <li>
               <code className="bg-indigo-900/50 px-1 rounded">REDEEMED123</code> - Already redeemed
