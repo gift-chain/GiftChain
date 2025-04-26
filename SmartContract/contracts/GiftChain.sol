@@ -118,6 +118,7 @@ contract GiftChain is ReentrancyGuard {
 
     //update status before transfer 
     gift.status = Status.CLAIMED; // gift successfully claimed
+    gift.claimed = true;
 
     // transfer tokens
     IERC20(gift.token).safeTransfer(msg.sender, gift.amount);
@@ -159,23 +160,23 @@ contract GiftChain is ReentrancyGuard {
 }
   // Working on validating gift
 
-  function validateGift(bytes32 giftID) external view returns (bool){
+  function validateGift(bytes32 giftID) external view returns (bool, string memory){
     Gift memory gift = gifts[giftID];
 
     if(gift.token == address(0)){
-      revert GiftErrors.GiftNotFound();
+      return (false, "Gift not found");
     }
 
     if(gift.status == Status.CLAIMED){
-      revert GiftErrors.GiftAlreadyRedeemed();
+      return (false, "Gift already claimed");
     }
 
     if(gift.status == Status.RECLAIMED) {
-      revert GiftErrors.GiftAlreadyReclaimed(); 
+      return (false, "Gift reclaimed"); 
     }
 
     if(gift.status != Status.PENDING){
-      revert GiftErrors.InvalidGiftStatus();
+      return (false, "Gift already redeemed");
     }
 
     return true;

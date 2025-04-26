@@ -6,6 +6,7 @@ const sharp = require("sharp");
 const QRCode = require("qrcode");
 const fs = require("fs");
 const path = require("path");
+const GiftCode = require("../models/Gift.js"); // Import Mongoose model
 
 // ERC20 ABI for token operations
 const ERC20_ABI = [
@@ -82,7 +83,6 @@ async function handleTokenApprovals(token, creator, amountBN) {
 }
 
 // Function to generate PNG gift card with sharp
-// Function to generate PNG gift card with sharp
 async function generateGiftCardImage(details) {
   return new Promise((resolve, reject) => {
     const { giftID, amount, token, expiry, message, creator, symbol } = details;
@@ -144,13 +144,13 @@ async function generateGiftCardImage(details) {
     `;
 
     // Generate QR code as PNG buffer with white background
-    QRCode.toBuffer(giftID, { 
+    QRCode.toBuffer(giftID, {
       width: 200,
       margin: 1,
       color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      }
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
     }, async (err, qrBuffer) => {
       if (err) {
         console.error("QR code generation failed:", err);
@@ -171,7 +171,7 @@ async function generateGiftCardImage(details) {
         `);
         image = image.composite([
           { input: qrBackground, left: 800, top: 300 },
-          { input: qrBuffer, left: 800, top: 300 }
+          { input: qrBuffer, left: 800, top: 300 },
         ]);
 
         // Add "Scan to claim" text
@@ -285,11 +285,11 @@ const createGift = async (req, res) => {
       const symbol = await erc20.symbol();
       console.log("Token symbol:", symbol);
       const amountBN = ethers.parseUnits(amount.toString(), decimals);
-      // const feeBN = amountBN / BigInt(100); // 1% fee
+      const feeBN = amountBN / BigInt(100); // 1% fee
       // const amountAfterFeeBN = amountBN - feeBN;
 
       console.log(`[AMOUNT] Breakdown:
-        Original: ${ethers.formatUnits(amountBN, decimals)} ${symbol}
+        Original: ${ethers.formatUnits(amountBN, decimals)} ${symbol}`);
         // Fee (1%): ${ethers.formatUnits(feeBN, decimals)} ${symbol}
         // After fee: ${ethers.formatUnits(amountAfterFeeBN, decimals)} ${symbol}`);
 
@@ -344,7 +344,7 @@ const createGift = async (req, res) => {
       // Check relayer balance after transfer
       const relayerBalance = await erc20.balanceOf(relayer.address);
       console.log("Relayer balance after transfer:", ethers.formatUnits(relayerBalance, decimals));
-      if (relayerBalance < amountAfterFeeBN) {
+      if (relayerBalance < amountBN) {
         if (tokensTransferred) {
           try {
             console.log("Returning tokens to creator due to insufficient relayer balance...");
@@ -360,7 +360,7 @@ const createGift = async (req, res) => {
           error: "Insufficient relayer balance after transfer",
           details: {
             balance: ethers.formatUnits(relayerBalance, decimals),
-            required: ethers.formatUnits(amountAfterFeeBN, decimals),
+            required: ethers.formatUnits(amountBN, decimals),
             token,
             relayer: relayer.address,
           },
@@ -403,30 +403,76 @@ const createGift = async (req, res) => {
       try {
         console.log("Creating gift on-chain...");
         const gasEstimate = await giftChain.createGift.estimateGas(
-          token,                            // _token
-          amountBN.toString(),              // _amount
-          expiry.toString(),                // _expiry
-          message,                          // _message
-          hashedCode,                       // _giftID
-          creatorHash                       // _creator
+          token, // _token
+          amountBN.toString(), // _amount
+          expiry.toString(), // _expiry
+          message, // _message
+          hashedCode, // _giftID
+          creatorHash // _creator
         );
         const gasLimit = (gasEstimate * BigInt(2)).toString();
         console.log("Gas estimate for gift creation:", gasEstimate.toString());
 
         const giftTx = await giftChain.createGift(
-          token,                            // _token
-          amountBN.toString(),              // _amount
-          expiry.toString(),                // _expiry
-          message,                          // _message
-          hashedCode,                       // _giftID
-          creatorHash,                      // _creator
+          token, // _token
+          amountBN.toString(), // _amount
+          expiry.toString(), // _expiry
+          message, // _message
+          hashedCode, // _giftID
+          creatorHash, // _creator
           {
-            gasLimit: gasLimit
+            gasLimit: gasLimit,
           }
         );
         console.log("Gift transaction hash:", giftTx.hash);
         const receipt = await giftTx.wait();
         console.log("Gift created successfully");
+
+        // Save to MongoDB
+        try {
+          const newGift = new GiftCode({
+            giftID: rawCode,
+            hashedCode,
+            token,
+            senderAddress: creator,
+            amount: ethers.formatUnits(amountBN, decimals),
+            fee: ethers.formatUnits(feeBN, decimals),
+            message,
+            expiry,
+            status: "created", // Optional, since it’s the default
+          });
+
+          await newGift.save();
+          console.log("Gift saved to MongoDB successfully");
+        } catch (dbError) {
+          console.error("Failed to save gift to MongoDB:", dbError);
+          // Attempt to refund tokens to creator
+          try {
+            console.log("Attempting to return tokens due to database error...");
+            const returnTx = await erc20.transfer(creator, amountBN);
+            await returnTx.wait();
+            console.log("Tokens returned successfully");
+            return res.status(500).json({
+              success: false,
+              error: "Failed to save gift to database",
+              details: {
+                dbError: dbError.message,
+                tokensReturned: true,
+                returnTransaction: returnTx.hash,
+              },
+            });
+          } catch (returnErr) {
+            console.error("Failed to return tokens:", returnErr);
+            return res.status(500).json({
+              success: false,
+              error: "Failed to save gift to database and return tokens",
+              details: {
+                dbError: dbError.message,
+                returnError: returnErr.message,
+              },
+            });
+          }
+        }
 
         // Generate PNG
         const downloadUrl = await generateGiftCardImage({
