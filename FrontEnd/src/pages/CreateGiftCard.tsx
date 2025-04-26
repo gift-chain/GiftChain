@@ -38,7 +38,7 @@ export default function CreateGiftCard() {
 
   // Map token symbols to addresses (Sepolia testnet)
   const tokenMap: Record<string, string> = {
-    USDT: '0x9092f9D0Ba4d2a027Cf7B6dD761C51cF893f2915', // Test USDT on Sepolia (from original CreateGiftCard.tsx)
+    USDT: '0xd1545a2f2d3bc9EeCFAd0634ee6e79Cea122DEc8', // Test USDT on Sepolia (from original CreateGiftCard.tsx)
     USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Placeholder (Mainnet address), replace with Sepolia USDC address
     DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F', // Placeholder (Mainnet address), replace with Sepolia DAI address
   };
