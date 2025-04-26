@@ -286,12 +286,12 @@ const createGift = async (req, res) => {
       console.log("Token symbol:", symbol);
       const amountBN = ethers.parseUnits(amount.toString(), decimals);
       const feeBN = amountBN / BigInt(100); // 1% fee
-      const amountAfterFeeBN = amountBN - feeBN;
+      // const amountAfterFeeBN = amountBN - feeBN;
 
       console.log(`[AMOUNT] Breakdown:
-        Original: ${ethers.formatUnits(amountBN, decimals)} ${symbol}
-        Fee (1%): ${ethers.formatUnits(feeBN, decimals)} ${symbol}
-        After fee: ${ethers.formatUnits(amountAfterFeeBN, decimals)} ${symbol}`);
+        Original: ${ethers.formatUnits(amountBN, decimals)} ${symbol}`);
+        // Fee (1%): ${ethers.formatUnits(feeBN, decimals)} ${symbol}
+        // After fee: ${ethers.formatUnits(amountAfterFeeBN, decimals)} ${symbol}`);
 
       const balance = await erc20.balanceOf(creator);
       console.log("Creator balance:", ethers.formatUnits(balance, decimals));
@@ -344,7 +344,7 @@ const createGift = async (req, res) => {
       // Check relayer balance after transfer
       const relayerBalance = await erc20.balanceOf(relayer.address);
       console.log("Relayer balance after transfer:", ethers.formatUnits(relayerBalance, decimals));
-      if (relayerBalance < amountAfterFeeBN) {
+      if (relayerBalance < amountBN) {
         if (tokensTransferred) {
           try {
             console.log("Returning tokens to creator due to insufficient relayer balance...");
@@ -360,7 +360,7 @@ const createGift = async (req, res) => {
           error: "Insufficient relayer balance after transfer",
           details: {
             balance: ethers.formatUnits(relayerBalance, decimals),
-            required: ethers.formatUnits(amountAfterFeeBN, decimals),
+            required: ethers.formatUnits(amountBN, decimals),
             token,
             relayer: relayer.address,
           },
