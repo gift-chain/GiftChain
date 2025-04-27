@@ -322,7 +322,7 @@ const createGift = async (req, res) => {
         });
         console.log("Transfer transaction hash:", pullTx.hash);
         const receipt = await pullTx.wait();
-        console.log("Transfer receipt:", receipt);
+        // console.log("Transfer receipt:", receipt);
         console.log("Transfer successful in block", receipt.blockNumber);
         tokensTransferred = true;
       } catch (err) {
