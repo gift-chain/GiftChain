@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
 import GiftChainABI from '../abi/giftChainABI.json'; // ABI of the smart contract
+import erc20ABI from '../abi/erc20ABI.json'; // ABI of the ERC20 token contract
 
 const CONTRACT_ADDRESS = '0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473';
-const PROVIDER_URL = 'https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX';
+const PROVIDER_URL = '';
 
 interface ValidationErrors {
   code?: string;
@@ -12,12 +13,19 @@ interface ValidationErrors {
 interface ValidationResult {
   isValid: boolean;
   message?: string;
+  details?: {
+    token: string;
+    message: string;
+    amount: string;
+    expiry: string;
+    timeCreated: string;
+    claimed: boolean;
+  };
 }
 
 const ValidateGift: React.FC = () => {
   const [code, setCode] = useState<string>('');
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -26,19 +34,42 @@ const ValidateGift: React.FC = () => {
   const contract = new ethers.Contract(CONTRACT_ADDRESS, GiftChainABI, provider);
 
   const validateGift = async (rawCode: string): Promise<ValidationResult> => {
+    if (!contract) {
+      return {
+        isValid: false,
+        message: 'Contract initialization failed',
+      };
+    }
     try {
       console.log('Validating gift code:', rawCode);
-      // Compute the expected codeHash for debugging
       const codeHash = ethers.keccak256(ethers.toUtf8Bytes(rawCode));
       console.log('Computed codeHash:', codeHash);
 
-      // Call validateGift with the raw code
+      // Call validateGift with the code hash
       const isValid = await contract.validateGift(codeHash);
       console.log('Validation result:', isValid);
+      let details
+      if(isValid) {
+        const gift = await contract.gifts(codeHash);
+        const erc20 = new ethers.Contract(gift.token, erc20ABI, provider);
+        const tokenSymbol = await erc20.symbol();
+        const tokenDecimals = await erc20.decimals();
+        const formattedAmount = ethers.formatUnits(gift.amount, tokenDecimals);
+        details = {
+          token: tokenSymbol,
+          message: gift.message,
+          amount: formattedAmount,
+          expiry: gift.expiry.toString(),
+          timeCreated: gift.timeCreated.toString(),
+          claimed: gift.claimed,
+        }
+      }
+
 
       return {
         isValid,
         message: isValid ? 'Gift card is valid!' : 'Gift card is invalid.',
+        details
       };
     } catch (error: any) {
       console.error('Validation error:', error);
@@ -95,52 +126,15 @@ const ValidateGift: React.FC = () => {
     }
   };
 
-  const handleClaimGift = async () => {
-    if (!validationResult?.isValid) {
-      alert('Please validate a valid gift code first');
-      return;
-    }
-
-    try {
-      if (!window.ethereum) {
-        alert('Please install MetaMask or another wallet provider');
-        return;
-      }
-
-      setIsSubmitting(true);
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contractWithSigner = new ethers.Contract(CONTRACT_ADDRESS, GiftChainABI, signer);
-
-      const codeHash = ethers.keccak256(ethers.toUtf8Bytes(code));
-      console.log('Claiming gift with codeHash:', codeHash);
-      const tx = await contractWithSigner.claimGift(codeHash);
-      await tx.wait();
-
-      setValidationResult({
-        isValid: false,
-        message: 'Gift claimed successfully!',
-      });
-      alert('Gift claimed successfully!');
-    } catch (error: any) {
-      console.error('Error claiming gift:', error);
-      setErrors({
-        code: error.reason || error.message || 'Transaction failed. Please try again.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-900 to-purple-900 flex items-center justify-center p-4">
       <div className="bg-indigo-950 rounded-lg shadow-xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-white text-center mb-6">Gift Card Validator</h1>
+        <h1 className="text-2xl font-bold text-white text-center mb-6">Validate Gift</h1>
         <p className="text-indigo-200 text-center mb-8">Enter your code to validate and claim your crypto gift</p>
 
         <div className="mb-6">
-          <label className="block text-indigo-200 mb-2">Gift Card Code</label>
-          <div className="flex">
+          <label className="block text-indigo-200 mb-2">Gift Code</label>
+          <div className="flex flex-col items-center">
             <input
               type="text"
               value={code}
@@ -148,14 +142,14 @@ const ValidateGift: React.FC = () => {
                 setCode(e.target.value);
                 setValidationResult(null);
               }}
-              className="w-full bg-indigo-900/50 text-white rounded-l-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full bg-indigo-900/50 text-white rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="Enter gift code (e.g., c2f1-eb68-edd1-89ba)"
             />
             <button
               type="button"
               onClick={handleCodeValidation}
               disabled={loading || !code.trim() || code.length < 6}
-              className="bg-indigo-700 hover:bg-indigo-600 text-white px-4 rounded-r-lg focus:outline-none disabled:opacity-50"
+              className="bg-purple-700 hover:bg-indigo-600 text-white py-4 px-4 my-4 rounded-lg focus:outline-none disabled:opacity-50"
             >
               {loading ? (
                 <svg
@@ -186,59 +180,38 @@ const ValidateGift: React.FC = () => {
           {errors.code && <p className="text-red-400 mt-1 text-sm">{errors.code}</p>}
         </div>
 
-        {validationResult && (
-          <div className="mb-6 bg-indigo-900/30 rounded-xl overflow-hidden border border-indigo-800/50">
-            <div
-              className={`p-4 ${
-                validationResult.isValid ? 'bg-green-500' : 'bg-red-500'
-              } text-white flex justify-between items-center`}
-            >
-              <h3 className="font-bold">Gift Card Status</h3>
-              <span className="px-2 py-1 text-xs rounded-full bg-white/20">
-                {validationResult.isValid ? 'Valid' : 'Invalid'}
-              </span>
+        {validationResult && validationResult.details && (
+          <div className="mt-4 space-y-3">
+            <h4 className="text-lg font-semibold text-white mb-3">Gift Details</h4>
+            <div className="bg-indigo-900/20 p-3 rounded-lg">
+                <p className="text-indigo-300 text-sm">Status</p>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${validationResult.details.claimed ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                  <p className="text-white font-medium">
+                    {validationResult.details.claimed ? 'Claimed' : 'Available'}
+                  </p>
+                </div>
             </div>
-            <div className="p-4">
-              <p
-                className={`text-sm ${
-                  validationResult.isValid ? 'text-green-400' : 'text-red-400'
-                }`}
-              >
-                {validationResult.message}
-              </p>
-              {validationResult.isValid && (
-                <button
-                  onClick={handleClaimGift}
-                  disabled={isSubmitting}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-                >
-                  {isSubmitting ? 'Claiming...' : 'Claim Gift'}
-                </button>
-              )}
+            <div className="grid gap-2">
+              <div className="bg-indigo-900/20 p-3 rounded-lg">
+                <p className="text-indigo-300 text-sm">Amount</p>
+                <p className="text-white font-medium">{validationResult.details.amount} {validationResult.details.token}</p>
+              </div>
+              
+              <div className="bg-indigo-900/20 p-3 rounded-lg">
+                <p className="text-indigo-300 text-sm">Message</p>
+                <p className="text-white font-medium">{validationResult.details.message}</p>
+              </div>
+              
+              <div className="bg-indigo-900/20 p-3 rounded-lg">
+                <p className="text-indigo-300 text-sm">Expiry</p>
+                <p className="text-white font-medium">
+                  {new Date(parseInt(validationResult.details.expiry) * 1000).toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
         )}
-
-        <div className="mt-6 text-xs text-indigo-300">
-          <p className="mb-1">Test codes:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>
-              <code className="bg-indigo-900/50 px-1 rounded">c2f1-eb68-edd1-89ba</code> - Valid gift card
-            </li>
-            <li>
-              <code className="bg-indigo-900/50 px-1 rounded">REDEEMED123</code> - Already redeemed
-            </li>
-            <li>
-              <code className="bg-indigo-900/50 px-1 rounded">RECLAIMED123</code> - Already reclaimed
-            </li>
-            <li>
-              <code className="bg-indigo-900/50 px-1 rounded">NOTFOUND123</code> - Gift not found
-            </li>
-            <li>
-              <code className="bg-indigo-900/50 px-1 rounded">EXPIRED123</code> - Expired gift
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   );

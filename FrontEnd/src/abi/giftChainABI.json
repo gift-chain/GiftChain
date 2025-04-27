@@ -312,22 +312,20 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
+		"inputs":[
 			{
-				"internalType": "string",
-				"name": "rawCode",
-				"type": "string"
+				"internalType":"bytes32","name":"giftID","type":"bytes32"
 			}
 		],
-		"name": "validateGift",
-		"outputs": [
+		"name":"validateGift",
+		"outputs":[
 			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
+				"internalType":"bool",
+				"name":"",
+				"type":"bool"
 			}
 		],
-		"stateMutability": "view",
-		"type": "function"
-	}
+		"stateMutability":"view",
+		"type":"function"
+		}
 ]

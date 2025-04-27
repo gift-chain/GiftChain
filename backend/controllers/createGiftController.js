@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { ethers, keccak256, getAddress } = require("ethers");
 const giftAbi = require("../abi/giftABI.json");
+const ERC20_ABI = require("../abi/erc20ABI.json");
 const { generateCode } = require("../utils/generateCode.js");
 const sharp = require("sharp");
 const QRCode = require("qrcode");
@@ -8,16 +9,6 @@ const fs = require("fs");
 const path = require("path");
 const GiftCode = require("../models/Gift.js"); // Import Mongoose model
 
-// ERC20 ABI for token operations
-const ERC20_ABI = [
-  "function transferFrom(address from, address to, uint256 value) external returns (bool)",
-  "function transfer(address to, uint256 value) external returns (bool)",
-  "function approve(address spender, uint256 amount) external returns (bool)",
-  "function allowance(address owner, address spender) external view returns (uint256)",
-  "function balanceOf(address account) external view returns (uint256)",
-  "function decimals() external view returns (uint8)",
-  "function symbol() external view returns (string)",
-];
 
 // Initialize provider and contracts
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
@@ -32,15 +23,19 @@ async function approveToken(tokenAddress, spender) {
   try {
     const erc20 = new ethers.Contract(tokenAddress, ERC20_ABI, relayer);
     const maxUint256 = ethers.MaxUint256;
-
+    
     console.log(`Approving ${spender} to spend tokens at ${tokenAddress}...`);
 
-    const gasEstimate = await erc20.approve.estimateGas(spender, maxUint256);
-    const gasLimit = (gasEstimate * BigInt(2)).toString();
+    // const gasEstimate = await erc20.approve.estimateGas(spender, maxUint256);
+    // const gasLimit = (gasEstimate * BigInt(2)).toString();
 
-    const tx = await erc20.approve(spender, maxUint256, {
-      gasLimit: gasLimit,
-    });
+    const tx = await erc20.approve(
+      spender, 
+      maxUint256, 
+      // {
+      //   gasLimit: gasLimit,
+      // }
+    );
 
     console.log(`Approval transaction hash: ${tx.hash}`);
     const receipt = await tx.wait();
@@ -214,7 +209,7 @@ const createGift = async (req, res) => {
 
     // Input validation
     if (!token || !amount || !expiry || !message || !creator) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
         error: "Missing required fields",
         details: {
@@ -230,7 +225,7 @@ const createGift = async (req, res) => {
     }
 
     if (!ethers.isAddress(token)) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
         error: "Invalid token address",
         details: {
@@ -241,7 +236,7 @@ const createGift = async (req, res) => {
     }
 
     if (!ethers.isAddress(creator)) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
         error: "Invalid creator address",
         details: {
@@ -252,7 +247,7 @@ const createGift = async (req, res) => {
     }
 
     if (message.length < 3 || message.length > 50) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
         error: "Invalid message length",
         details: {
@@ -265,7 +260,7 @@ const createGift = async (req, res) => {
 
     const now = Math.floor(Date.now() / 1000);
     if (now >= expiry) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
         error: "Invalid expiry date",
         details: {
@@ -295,9 +290,9 @@ const createGift = async (req, res) => {
 
       const balance = await erc20.balanceOf(creator);
       console.log("Creator balance:", ethers.formatUnits(balance, decimals));
-
+      
       if (balance < amountBN) {
-        return res.status(400).json({
+        return res.status(400).json({ 
           success: false,
           error: "Insufficient token balance",
           details: {
@@ -317,9 +312,14 @@ const createGift = async (req, res) => {
         console.log("Transferring tokens from creator to relayer...");
         const gasEstimate = await erc20.transferFrom.estimateGas(creator, relayer.address, amountBN);
         const gasLimit = (gasEstimate * BigInt(2)).toString();
-        const pullTx = await erc20.transferFrom(creator, relayer.address, amountBN, {
-          gasLimit,
-        });
+        const pullTx = await erc20.transferFrom(
+          creator, 
+          relayer.address, 
+          amountBN, 
+          // {
+          //   gasLimit,
+          // }
+        );
         console.log("Transfer transaction hash:", pullTx.hash);
         const receipt = await pullTx.wait();
         // console.log("Transfer receipt:", receipt);
@@ -327,7 +327,7 @@ const createGift = async (req, res) => {
         tokensTransferred = true;
       } catch (err) {
         console.error("Transfer failed:", err);
-        return res.status(400).json({
+        return res.status(400).json({ 
           success: false,
           error: "Failed to transfer tokens",
           details: {
@@ -420,9 +420,9 @@ const createGift = async (req, res) => {
           message, // _message
           hashedCode, // _giftID
           creatorHash, // _creator
-          {
-            gasLimit: gasLimit,
-          }
+          // {
+          //   gasLimit: gasLimit,
+          // }
         );
         console.log("Gift transaction hash:", giftTx.hash);
         const receipt = await giftTx.wait();
@@ -485,8 +485,8 @@ const createGift = async (req, res) => {
           symbol,
         });
 
-        res.status(200).json({
-          success: true,
+        res.status(200).json({ 
+          success: true, 
           message: "Gift Created Successfully",
           details: {
             giftID: rawCode,
@@ -502,21 +502,21 @@ const createGift = async (req, res) => {
       } catch (err) {
         console.error("Gift creation failed:", err);
         if (tokensTransferred) {
-          try {
+        try {
             console.log("Attempting to return tokens to creator...");
             const relayerBalanceBeforeReturn = await erc20.balanceOf(relayer.address);
             console.log("Relayer balance before return:", ethers.formatUnits(relayerBalanceBeforeReturn, decimals));
             if (relayerBalanceBeforeReturn >= amountBN) {
-              const returnTx = await erc20.transfer(creator, amountBN);
-              await returnTx.wait();
+          const returnTx = await erc20.transfer(creator, amountBN);
+          await returnTx.wait();
               console.log("Tokens returned successfully");
-              return res.status(400).json({
-                success: false,
+          return res.status(400).json({ 
+            success: false,
                 error: "Failed to create gift on-chain",
-                details: {
-                  reason: err.reason || err.message,
-                  tokensReturned: true,
-                  returnTransaction: returnTx.hash,
+            details: {
+              reason: err.reason || err.message,
+              tokensReturned: true,
+              returnTransaction: returnTx.hash,
                   originalError: err,
                 },
               });
@@ -546,7 +546,7 @@ const createGift = async (req, res) => {
             });
           }
         } else {
-          return res.status(400).json({
+          return res.status(400).json({ 
             success: false,
             error: "Failed to create gift on-chain",
             details: {
@@ -558,7 +558,7 @@ const createGift = async (req, res) => {
       }
     } catch (err) {
       console.error("Token interaction failed:", err);
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
         error: "Token interaction failed",
         details: {
@@ -571,7 +571,7 @@ const createGift = async (req, res) => {
     }
   } catch (err) {
     console.error("Relayer error:", err);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
       error: "Internal server error",
       details: {
