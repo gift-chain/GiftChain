@@ -76,11 +76,17 @@ contract GiftChain is ReentrancyGuard {
     bytes32 _giftID,
     bytes32 _creator
     ) external onlyRelayer() {
+
     if(_token == address(0)) revert GiftErrors.INVALID_ADDRESS();
+
     if(_amount <= 0) revert GiftErrors.INVALID_AMOUNT();
+
     if(_expiry <= block.timestamp) revert GiftErrors.EXPIRY_CAN_ONLY_BE_IN_FUTURE();
+
     if(bytes(_message).length < 3 || bytes(_message).length > 50) revert GiftErrors.EXPECT_3_TO_50_MESSAGE_CHARACTER();
+
     if(gifts[_giftID].timeCreated != 0) revert GiftErrors.CARD_ALREADY_EXIST();
+    
     IERC20 token = IERC20(_token);
 
     if(!token.transferFrom(msg.sender, address(this), _amount)) revert GiftErrors.TRANSFER_FAILED();

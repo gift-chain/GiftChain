@@ -39,17 +39,7 @@ const router = createBrowserRouter([
       //   path: "/",
       //   element: ,
       // },
-
-      {
-        path: "/validateGift",
-        element: <ValidateGift /> ,
-      },
-
-      {
-        path: "/reclaimGift",
-        element: <ReclaimGift /> ,
-      },
-     
+      
       {
         path: "/dashboard",
         element: <Dashboard />,
@@ -61,7 +51,15 @@ const router = createBrowserRouter([
       {
         path: "/claim-gift",
         element: <ClaimGift/>
-      }
+      },
+      {
+        path: "/validateGift",
+        element: <ValidateGift /> 
+      },
+      {
+        path: "/reclaimGift",
+        element: <ReclaimGift />
+      },
     ],
   },
 ]);

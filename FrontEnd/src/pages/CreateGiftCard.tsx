@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -25,6 +26,7 @@ interface GiftResponse {
 }
 
 export default function CreateGiftCard() {
+  const navigate = useNavigate();
   const { address } = useAccount();
   const [form, setForm] = useState<GiftForm>({
     token: '',
@@ -38,7 +40,8 @@ export default function CreateGiftCard() {
 
   // Map token symbols to addresses (Sepolia testnet)
   const tokenMap: Record<string, string> = {
-    USDT: '0xd1545a2f2d3bc9EeCFAd0634ee6e79Cea122DEc8', // Test USDT on Sepolia (from original CreateGiftCard.tsx)
+    USDT: '0xb1B83B96402978F212af2415b1BffAad0D2aF1bb', // Test USDT on Sepolia (from original CreateGiftCard.tsx)
+    // USDT: '0xd1545a2f2d3bc9EeCFAd0634ee6e79Cea122DEc8', // Test USDT on Sepolia (from original CreateGiftCard.tsx)
     USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Placeholder (Mainnet address), replace with Sepolia USDC address
     DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F', // Placeholder (Mainnet address), replace with Sepolia DAI address
   };
@@ -99,6 +102,7 @@ export default function CreateGiftCard() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        navigate('/dashboard');
       } else {
         setError(response.data.error || 'Failed to create gift.');
       }
@@ -236,7 +240,7 @@ export default function CreateGiftCard() {
                 href={`http://localhost:3000${gift.downloadUrl}`}
                 download={`${gift.giftID}.png`}
                 className="inline-block bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 px-4 rounded-lg transition"
-ebe              >
+              >
                 Download Gift Card Image
               </a>
             </div>

@@ -1,5 +1,5 @@
 {
-  "name": "solarenergyswap-v1",
+  "name": "giftchain",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,21 +8,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/solar-swap/SolarEnergySwap-v1.git"
+    "url": "git+https://github.com/gift-chain/GiftChain.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/solar-swap/SolarEnergySwap-v1/issues"
+    "url": "https://github.com/gift-chain/GiftChain/issues"
   },
-  "homepage": "https://github.com/solar-swap/SolarEnergySwap-v1#readme",
+  "homepage": "https://github.com/gift-chain/GiftChain#readme",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.23.0",
-    "typescript": "^5.8.3"
+    "hardhat": "^2.23.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.3.0",
-    "dotenv": "^16.5.0"
+    "@openzeppelin/contracts": "^5.3.0"
   }
 }
