@@ -15,17 +15,22 @@ import {
 import { ethers } from "ethers";
 import { getTokenSymbol } from "../utils/tokenMapping";
 import axios from "axios";
+import Button from "../ui/Button";
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
 
-  const { giftsCreated, loading: giftsLoading, error: giftsError } = useUserGifts(address || "");
+  // State to store MongoDB giftIDs (rawcode)
+  const [giftIDs, setGiftIDs] = useState<{ [key: string]: string }>({});
+
+  const hashedAddress = address ? ethers.keccak256(ethers.getAddress(address)) : null;
+
+  const { giftsCreated, loading: giftsLoading, error: giftsError } = useUserGifts(hashedAddress || "");
   const { claimedGifts, loading: claimedLoading, error: claimedError } = useUserClaimedGifts(address || "");
   const { reclaimedGifts, loading: reclaimedLoading, error: reclaimedError } = useUserReclaimedGifts(address || "");
 
-  // State to store MongoDB giftIDs (rawcode)
-  const [giftIDs, setGiftIDs] = useState<{ [key: string]: string }>({});
+  console.log("Gift Created => ", giftsCreated);
 
   // Fetch giftIDs from MongoDB using subgraph hashedCode
   useEffect(() => {
@@ -33,7 +38,7 @@ export default function Dashboard() {
       // Get unique hashedCodes from created and claimed gifts
       const uniqueHashedCodes = Array.from(
         new Set([
-          ...giftsCreated.map((gift) => gift.giftID.toLowerCase()),
+          ...giftsCreated.map((gift) => gift.id.toLowerCase()),
           ...claimedGifts.map((claimed) => claimed.gift.id.toLowerCase()),
         ])
       );
@@ -60,7 +65,7 @@ export default function Dashboard() {
       }, {} as { [key: string]: string });
 
       // Merge new giftIDs with existing ones
-      setGiftIDs((prev) => ({ ...prev, ...newGiftIDMap }));
+      setGiftIDs((prev) => ({ ...prev, ...newGiftIDMap }));      
     };
 
     if (giftsCreated.length > 0 || claimedGifts.length > 0) {
@@ -99,7 +104,7 @@ export default function Dashboard() {
   // Combine gifts for BulkGiftTable (created gifts)
   const bulkGiftData = useMemo(() => {
     return giftsCreated.map((gift) => ({
-      code: giftIDs[gift.giftID.toLowerCase()] || "Loading...", // Use MongoDB giftID
+      code: giftIDs[gift.id.toLowerCase()] || "Loading...", // Use MongoDB giftID
       status: gift.status || "PENDING",
       amount: parseFloat(ethers.formatEther(gift.amount)),
       token: getTokenSymbol(gift.token),
@@ -127,7 +132,7 @@ export default function Dashboard() {
       amount: parseFloat(ethers.formatEther(gift.amount)),
       token: getTokenSymbol(gift.token),
       expiry: new Date(parseInt(gift.expiry) * 1000).toISOString().split("T")[0],
-      giftCode: giftIDs[gift.giftID.toLowerCase()] || "Loading...", // Use MongoDB giftID
+      giftCode: giftIDs[gift.id.toLowerCase()] || "Loading...", // Use MongoDB giftID
     }));
   }, [giftsCreated, giftIDs]);
 
@@ -215,6 +220,7 @@ export default function Dashboard() {
         {/* GiftCard section */}
         <div className="mt-10">
           <h2 className="text-white font-semibold mb-4">Your Gift Cards</h2>
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {userCards.map((card, idx) => (
               <div key={idx} className="relative">

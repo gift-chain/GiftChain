@@ -5,8 +5,7 @@ export const GET_USER_GIFTS = gql`
   query GetUserGifts($userId: Bytes!) {
     user(id: $userId) {
       id
-      
-      gifts {
+      gifts (orderBy: timeCreated, orderDirection: desc) {
         id
         token
         message

@@ -20,30 +20,28 @@ interface GiftCreated {
   status: "PENDING" | "CLAIMED" | "RECLAIMED";
 }
 
-interface Gift {
-  id: string;
-  token: string;
-  message: string;
-  amount: string;
-  expiry: string;
-  timeCreated: string;
-  status: "PENDING" | "CLAIMED" | "RECLAIMED";
-  claimed?: {
+interface Gifts {
     id: string;
-    recipient: string;
+    token: string;
+    message: string;
     amount: string;
-    blockNumber: string;
-    blockTimestamp: string;
-    transactionHash: string;
-  };
-  reclaimed?: {
-    id: string;
-    creator: string;
-    amount: string;
-    blockNumber: string;
-    blockTimestamp: string;
-    transactionHash: string;
-  };
+    expiry: string;
+    timeCreated: string;
+    status: "PENDING" | "CLAIMED" | "RECLAIMED";
+    claimed?: {
+      recipient: string;
+      amount: string;
+      blockNumber: string;
+      blockTimestamp: string;
+      transactionHash: string;
+    };
+    reclaimed?: {
+      creator: string;
+      amount: string;
+      blockNumber: string;
+      blockTimestamp: string;
+      transactionHash: string;
+    };
 }
 
 interface GiftClaimed {
@@ -87,7 +85,7 @@ interface UserGiftsData {
   user: {
     id: string;
     giftsCreated: GiftCreated[];
-    gifts: Gift[];
+    gifts: Gifts[];
   } | null;
 }
 
@@ -106,7 +104,7 @@ export const useUserGifts = (userAddress: string) => {
   });
 
   return {
-    giftsCreated: data?.user?.giftsCreated || [],
+    giftsCreated: data?.user?.gifts || [],
     gifts: data?.user?.gifts || [],
     loading,
     error,

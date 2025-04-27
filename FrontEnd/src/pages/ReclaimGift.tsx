@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
 import { useAccount } from 'wagmi';
-import GiftChainABI from '../abi/giftABI.json'; // ABI of the smart contract
+import GiftChainABI from '../abi/giftChainABI.json'; // ABI of the smart contract
 
 const CONTRACT_ADDRESS = '0xe4a0D63fd8d7f895d2077B5A2f28847Fb82B50a2';
 const PROVIDER_URL = 'https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX';
