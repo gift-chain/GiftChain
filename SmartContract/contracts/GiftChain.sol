@@ -166,26 +166,25 @@ contract GiftChain is ReentrancyGuard {
 }
   // Working on validating gift
 
-  function validateGift(bytes32 giftID) external view returns (bool, string memory){
+  function validateGift(bytes32 giftID) external view returns (bool isValid, string memory message) {
     Gift memory gift = gifts[giftID];
 
-    if(gift.token == address(0)){
-      return (false, "Gift not found");
+    if (gift.token == address(0)) {
+        return (false, "Gift not found");
     }
 
-    if(gift.status == Status.CLAIMED){
-      return (false, "Gift already claimed");
+    if (gift.status == Status.CLAIMED) {
+        return (false, "Gift already claimed");
     }
 
-    if(gift.status == Status.RECLAIMED) {
-      return (false, "Gift reclaimed"); 
-    } 
-
-    if(gift.status != Status.PENDING){
-      return (false, "Gift already redeemed");
+    if (gift.status == Status.RECLAIMED) {
+        return (false, "Gift reclaimed");
     }
 
-    return true;
+    if (gift.status != Status.PENDING) {
+        return (false, "Gift already redeemed");
+    }
 
-  }
+    return (true, "Valid gift");
+}
 }
