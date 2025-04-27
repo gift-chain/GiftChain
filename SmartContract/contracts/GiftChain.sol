@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {GiftErrors} from  "../Library/error.sol";
+import {GiftErrors} from  "../Library/GiftErrors.sol";
 
 
 contract GiftChain is ReentrancyGuard {
@@ -179,7 +179,7 @@ contract GiftChain is ReentrancyGuard {
 
     if(gift.status == Status.RECLAIMED) {
       return (false, "Gift reclaimed"); 
-    }
+    } 
 
     if(gift.status != Status.PENDING){
       return (false, "Gift already redeemed");
