@@ -13,9 +13,31 @@ import {
   useUserReclaimedGifts,
 } from "../subgraph/useGiftQueries";
 import { ethers } from "ethers";
-import { getTokenSymbol } from "../utils/tokenMapping";
 import axios from "axios";
-import Button from "../ui/Button";
+
+// Token map (Sepolia testnet addresses)
+const tokenMap: Record<string, string> = {
+  USDT: "0xf99F557Ed59F884F49D923643b1A48F834a90653",
+  USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  DAI: "0x68194a729C2450ad26072b3D33ADaCbcef39D574",
+};
+
+// Reverse token map (address to symbol)
+const reverseTokenMap: Record<string, string> = Object.fromEntries(
+  Object.entries(tokenMap).map(([symbol, address]) => [address.toLowerCase(), symbol])
+);
+
+// Token decimals map
+const tokenDecimals: Record<string, number> = {
+  USDT: 6,
+  USDC: 6,
+  DAI: 6,
+};
+
+// Get token symbol (fallback to address if unknown)
+const getTokenSymbol = (tokenAddress: string): string => {
+  return reverseTokenMap[tokenAddress.toLowerCase()] || tokenAddress.slice(0, 8);
+};
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
@@ -31,11 +53,12 @@ export default function Dashboard() {
   const { reclaimedGifts, loading: reclaimedLoading, error: reclaimedError } = useUserReclaimedGifts(address || "");
 
   console.log("Gift Created => ", giftsCreated);
+  console.log("Claimed Gifts:", claimedGifts);
+  console.log("Gift IDs (rawcode):", giftIDs);
 
   // Fetch giftIDs from MongoDB using subgraph hashedCode
   useEffect(() => {
     const fetchGiftIDs = async () => {
-      // Get unique hashedCodes from created and claimed gifts
       const uniqueHashedCodes = Array.from(
         new Set([
           ...giftsCreated.map((gift) => gift.id.toLowerCase()),
@@ -43,7 +66,6 @@ export default function Dashboard() {
         ])
       );
 
-      // Only fetch new hashedCodes not already in giftIDs
       const newHashedCodes = uniqueHashedCodes.filter((hashedCode) => !(hashedCode in giftIDs));
 
       if (newHashedCodes.length === 0) return;
@@ -64,8 +86,7 @@ export default function Dashboard() {
         return acc;
       }, {} as { [key: string]: string });
 
-      // Merge new giftIDs with existing ones
-      setGiftIDs((prev) => ({ ...prev, ...newGiftIDMap }));      
+      setGiftIDs((prev) => ({ ...prev, ...newGiftIDMap }));
     };
 
     if (giftsCreated.length > 0 || claimedGifts.length > 0) {
@@ -73,18 +94,16 @@ export default function Dashboard() {
     }
   }, [giftsCreated, claimedGifts]);
 
-  // Log claimed gifts and giftIDs for debugging
-  console.log("Claimed Gifts:", claimedGifts);
-  console.log("Gift IDs (rawcode):", giftIDs);
-
   // Compute stats for CardBox
-  const { totalGift, claimedPercentage, feePaid } = useMemo(() => {
+  const stats = useMemo(() => {
     let totalGift = 0;
     let claimedCount = 0;
     let feePaid = 0;
 
     giftsCreated.forEach((gift) => {
-      const amount = parseFloat(ethers.formatEther(gift.amount));
+      const tokenSymbol = getTokenSymbol(gift.token);
+      const decimals = tokenDecimals[tokenSymbol] || 6;
+      const amount = parseFloat(ethers.formatUnits(gift.amount, decimals));
       totalGift += amount;
       feePaid += amount * 0.01;
     });
@@ -101,40 +120,62 @@ export default function Dashboard() {
     };
   }, [giftsCreated, claimedGifts]);
 
-  // Combine gifts for BulkGiftTable (created gifts)
+  // Combine gifts for BulkGiftTable
   const bulkGiftData = useMemo(() => {
-    return giftsCreated.map((gift) => ({
-      code: giftIDs[gift.id.toLowerCase()] || "Loading...", // Use MongoDB giftID
-      status: gift.status || "PENDING",
-      amount: parseFloat(ethers.formatEther(gift.amount)),
-      token: getTokenSymbol(gift.token),
-      expiry: new Date(parseInt(gift.expiry) * 1000).toISOString().split("T")[0],
-      claimed: !!claimedGifts.find((c) => c.gift.id === gift.id),
-    }));
+    return giftsCreated.map((gift) => {
+      const tokenSymbol = getTokenSymbol(gift.token);
+      const decimals = tokenDecimals[tokenSymbol] || 6;
+      const expiryDate = new Date(parseInt(gift.expiry) * 1000);
+      const isExpired = expiryDate < new Date();
+      return {
+        code: giftIDs[gift.id.toLowerCase()] || "Loading...",
+        status: isExpired ? "EXPIRED" : gift.status || "PENDING",
+        amount: parseFloat(ethers.formatUnits(gift.amount, decimals)),
+        token: tokenSymbol,
+        expiry: expiryDate.toISOString().split("T")[0],
+        claimed: !!claimedGifts.find((c) => c.gift.id === gift.id),
+      };
+    });
   }, [giftsCreated, claimedGifts, giftIDs]);
 
-  // Combine claimed gifts for a new table
+  // Combine claimed gifts
   const claimedGiftData = useMemo(() => {
-    return claimedGifts.map((claimed) => ({
-      code: giftIDs[claimed.gift.id.toLowerCase()] || "Loading...", // Use MongoDB giftID
-      message: claimed.gift.message,
-      amount: parseFloat(ethers.formatEther(claimed.amount)),
-      token: getTokenSymbol(claimed.gift.token),
-      claimedDate: new Date(parseInt(claimed.blockTimestamp) * 1000).toISOString().split("T")[0],
-    }));
+    return claimedGifts.map((claimed) => {
+      const tokenSymbol = getTokenSymbol(claimed.gift.token);
+      const decimals = tokenDecimals[tokenSymbol] || 6;
+      return {
+        code: giftIDs[claimed.gift.id.toLowerCase()] || "Loading...",
+        message: claimed.gift.message,
+        amount: parseFloat(ethers.formatUnits(claimed.amount, decimals)),
+        token: tokenSymbol,
+        claimedDate: new Date(parseInt(claimed.blockTimestamp) * 1000).toISOString().split("T")[0],
+      };
+    });
   }, [claimedGifts, giftIDs]);
 
   // Combine gifts for GiftCard
   const userCards = useMemo(() => {
-    return giftsCreated.map((gift, idx) => ({
-      cardName: `Card ${idx + 1}`,
-      status: gift.status || "PENDING",
-      amount: parseFloat(ethers.formatEther(gift.amount)),
-      token: getTokenSymbol(gift.token),
-      expiry: new Date(parseInt(gift.expiry) * 1000).toISOString().split("T")[0],
-      giftCode: giftIDs[gift.id.toLowerCase()] || "Loading...", // Use MongoDB giftID
-    }));
+    return giftsCreated.map((gift, idx) => {
+      const tokenSymbol = getTokenSymbol(gift.token);
+      const decimals = tokenDecimals[tokenSymbol] || 6;
+      const expiryDate = new Date(parseInt(gift.expiry) * 1000);
+      const isExpired = expiryDate < new Date();
+      return {
+        cardName: `Card ${idx + 1}`,
+        status: isExpired ? "EXPIRED" : gift.status || "PENDING",
+        amount: parseFloat(ethers.formatUnits(gift.amount, decimals)),
+        token: tokenSymbol,
+        expiry: expiryDate.toISOString(),
+        giftCode: giftIDs[gift.id.toLowerCase()] || "Loading...",
+      };
+    });
   }, [giftsCreated, giftIDs]);
+
+  // Debug logs
+  console.log("Bulk Gift Data:", bulkGiftData);
+  console.log("Claimed Gift Data:", claimedGiftData);
+  console.log("User Cards:", userCards);
+  console.log("Stats:", stats);
 
   if (!isConnected) {
     return (
@@ -163,7 +204,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen relative bg-figmablue overflow-hidden">
-      {/* Gradient Blurs */}
       <div className="absolute top-0 left-0 w-64 h-64 inset-9 bg-[#9812C2] blur-[120px] opacity-100 z-0" />
       <div className="absolute bottom-32 right-0 w-64 inset-9 h-64 bg-[#9812C2] blur-[120px] opacity-100 z-0" />
       <div className="absolute bottom-0 left-1/3 w-48 inset-9 h-48 bg-[#9812C2] blur-[120px] opacity-100 z-0" />
@@ -174,15 +214,14 @@ export default function Dashboard() {
         </div>
 
         <div className="flex gap-4 mt-6">
-          <CardBox title="Total Gift" value={`$${totalGift}`} />
-          <CardBox title="Claimed Gift" value={`${claimedPercentage}%`} />
-          <CardBox title="Fee Paid" value={`$${feePaid}`} />
+          <CardBox title="Total Gift" value={`$${stats.totalGift}`} />
+          <CardBox title="Claimed Gift" value={`${stats.claimedPercentage}%`} />
+          <CardBox title="Fee Paid" value={`$${stats.feePaid}`} />
         </div>
 
         <h2 className="text-white font-semibold mt-10 mb-4">Created Gifts</h2>
         <BulkGiftTable data={bulkGiftData} />
 
-        {/* New section for claimed gifts */}
         <h2 className="text-white font-semibold mt-10 mb-4">Claimed Gifts</h2>
         <div className="bg-[#1E1E1E] rounded-xl p-4">
           {claimedGiftData.length === 0 ? (
@@ -200,16 +239,14 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {claimedGifts.map((gift, idx) => (
+                {claimedGiftData.map((gift, idx) => (
                   <tr key={idx} className="border-t border-gray-700">
-                    <td className="p-2">{giftIDs[gift.gift.id.toLowerCase()] || gift.gift.id.slice(0, 8)}</td>
-                    <td className="p-2">{gift.gift.message}</td>
-                    <td className="p-2">{parseFloat(ethers.formatEther(gift.amount))}</td>
-                    <td className="p-2">{getTokenSymbol(gift.gift.token)}</td>
-                    <td className="p-2">
-                      {new Date(parseInt(gift.blockTimestamp) * 1000).toISOString().split("T")[0]}
-                    </td>
-                    <td className="p-2">{gift.transactionHash.slice(0, 8)}...</td>
+                    <td className="p-2">{gift.code}</td>
+                    <td className="p-2">{gift.message}</td>
+                    <td className="p-2">{gift.amount}</td>
+                    <td className="p-2">{gift.token}</td>
+                    <td className="p-2">{gift.claimedDate}</td>
+                    {/* <td className="p-2">{gift.transactionHash?.slice(0, 8)}...</td> */}
                   </tr>
                 ))}
               </tbody>
@@ -217,17 +254,15 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* GiftCard section */}
         <div className="mt-10">
           <h2 className="text-white font-semibold mb-4">Your Gift Cards</h2>
-          
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {userCards.map((card, idx) => (
               <div key={idx} className="relative">
                 {idx === userCards.length - 1 && (
                   <div className="absolute inset-0 bg-[#9812C2] blur-[120px] opacity-100 z-0 rounded-xl" />
                 )}
-                <GiftCard card={card} />
+                <GiftCard card={card} userAddress={address} />
               </div>
             ))}
           </div>

@@ -18,7 +18,7 @@ interface BulkGiftTableProps {
 export const BulkGiftTable = ({ data }: BulkGiftTableProps) => {
   return (
     <div className="w-full mt-8 space-y-4">
-      <h2 className="text-white font-semibold mb-4">Bulk Gift</h2>
+      {/* <h2 className="text-white font-semibold mb-4">Bulk Gift</h2> */}
 
       {data.length === 0 ? (
         <p className="text-white">No gifts found.</p>
@@ -31,6 +31,12 @@ export const BulkGiftTable = ({ data }: BulkGiftTableProps) => {
             <div>
               <p className="text-xs text-white/50 uppercase">Code</p>
               <p className="font-medium">{gift.code}</p>
+              <button
+                onClick={() => navigator.clipboard.writeText(gift.code)}
+                className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20 transition"
+              >
+                Copy
+              </button>
             </div>
             <div>
               <p className="text-xs text-white/50 uppercase">Status</p>

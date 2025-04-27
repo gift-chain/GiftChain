@@ -33,7 +33,7 @@ const ValidateGift: React.FC = () => {
       console.log('Computed codeHash:', codeHash);
 
       // Call validateGift with the raw code
-      const isValid = await contract.validateGift(rawCode);
+      const isValid = await contract.validateGift(codeHash);
       console.log('Validation result:', isValid);
 
       return {

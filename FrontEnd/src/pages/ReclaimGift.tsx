@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import { useAccount } from 'wagmi';
 import GiftChainABI from '../abi/giftChainABI.json'; // ABI of the smart contract
 
-const CONTRACT_ADDRESS = '0xe4a0D63fd8d7f895d2077B5A2f28847Fb82B50a2';
+const CONTRACT_ADDRESS = '0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473';
 const PROVIDER_URL = 'https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX';
 
 // Enum to match contract status
@@ -46,7 +46,7 @@ const ReclaimGift: React.FC = () => {
       console.log('Computed codeHash:', codeHash);
 
       // Validate gift
-      const isValid = await contract.validateGift(rawCode);
+      const isValid = await contract.validateGift(codeHash);
       console.log('Validation result:', isValid);
 
       // Fetch gift details from the gifts mapping
