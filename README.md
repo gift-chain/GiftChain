@@ -80,21 +80,21 @@ GiftChain/
 └── README.md               # project documentation
 
 
-## Installation 
+## Installation
 
-Prerequisites
+### Prerequisites
 
 - Node.js (v16 or higher)
 - Yarn or npm
 - Hardhat (for smart contract development)
 - The Graph CLI (for subgraph deployment)
 
-Steps
-1. Clone the repository:
+### Steps
 
-```
-git clone https://github.com/your-repo/GiftChain.git
-cd GiftChain
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/GiftChain.git
+   cd GiftChain
 ``` 
 
 2. Install dependencies for the frontend:
