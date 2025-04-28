@@ -56,7 +56,7 @@ GiftChain is designed to make crypto gifting as simple as sending a message. It 
 
 ## Project Structure
 
-
+```
 GiftChain/
 ├── FrontEnd/               # React-based frontend
 │   ├── src/
@@ -78,7 +78,7 @@ GiftChain/
 │   ├── subgraph.yaml       # Subgraph configuration
 │   └── mappings/           # Mapping functions
 └── README.md               # project documentation
-
+```
 
 ## Installation
 
@@ -95,11 +95,10 @@ GiftChain/
    ```bash
    git clone https://github.com/your-repo/GiftChain.git
    cd GiftChain
-``` 
-
+   
 2. Install dependencies for the frontend:
 
-```
+```bash
 cd FrontEnd
 npm install
 ```
