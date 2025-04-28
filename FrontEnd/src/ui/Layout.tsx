@@ -7,6 +7,7 @@ import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApolloProvider } from "@apollo/client";
 import client from "../subgraph/apolloClient";
+import Sidebar from "./Sidebar";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const queryClient = new QueryClient();
@@ -17,6 +18,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <QueryClientProvider client={queryClient}>
           <ApolloProvider client={client}>
             <Header />
+            <Sidebar/>
             {children}
             {/* <Footer /> */}
           </ApolloProvider>

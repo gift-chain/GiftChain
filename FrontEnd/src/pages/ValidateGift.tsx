@@ -4,7 +4,7 @@ import GiftChainABI from '../abi/giftChainABI.json'; // ABI of the smart contrac
 import erc20ABI from '../abi/erc20ABI.json'; // ABI of the ERC20 token contract
 
 const CONTRACT_ADDRESS = '0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473';
-const PROVIDER_URL = '';
+const PROVIDER_URL = 'https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX';
 
 interface ValidationErrors {
   code?: string;
