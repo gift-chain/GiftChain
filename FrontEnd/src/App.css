@@ -2,7 +2,26 @@
 
 
 @theme{
-  --color-figmablue: #1F1668
+  --color-figmablue: #1F1668;
+  --perspective-1000: 1000px;
+  --transform-style-preserve-3d: preserve-3d;
+  --backface-visibility-hidden: hidden;
+  --rotate-y-180: rotateY(180deg);
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: var(--perspective-1000);
+  }
+  .transform-style-preserve-3d {
+    transform-style: var(--transform-style-preserve-3d);
+  }
+  .backface-hidden {
+    backface-visibility: var(--backface-visibility-hidden);
+  }
+  .rotate-y-180 {
+    transform: var(--rotate-y-180);
+  }
 }
 
 /* App.css */

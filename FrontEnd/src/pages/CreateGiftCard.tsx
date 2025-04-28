@@ -1,11 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount } from 'wagmi';
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { Contract, BrowserProvider, parseUnits, MaxUint256 } from 'ethers';
 import giftcard from '../assets/giftcard.png';
 import { GiftCard } from '../ui/GiftCard';
 import Container from '../ui/Container';
+
+// Minimal ERC-20 ABI for allowance, approve, decimals
+const ERC20_ABI = [
+  {
+    constant: true,
+    inputs: [
+      { name: '_owner', type: 'address' },
+      { name: '_spender', type: 'address' },
+    ],
+    name: 'allowance',
+    outputs: [{ name: '', type: 'uint256' }],
+    type: 'function',
+  },
+  {
+    constant: false,
+    inputs: [
+      { name: '_spender', type: 'address' },
+      { name: '_value', type: 'uint256' },
+    ],
+    name: 'approve',
+    outputs: [{ name: '', type: 'bool' }],
+    type: 'function',
+  },
+  {
+    constant: true,
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    type: 'function',
+  },
+];
 
 interface GiftForm {
   token: string;
@@ -28,6 +60,8 @@ interface GiftResponse {
 export default function CreateGiftCard() {
   const navigate = useNavigate();
   const { address } = useAccount();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
   const [form, setForm] = useState<GiftForm>({
     token: '',
     amount: '',
@@ -37,17 +71,61 @@ export default function CreateGiftCard() {
   const [gift, setGift] = useState<GiftResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
-  // Map token symbols to addresses (Sepolia testnet)
+  // Relayer address (from creategift.js)
+  const RELAYER_ADDRESS = '0xA07139110776DF9621546441fc0a5417B8E945DF';
+
+  // Token map (Sepolia testnet addresses)
   const tokenMap: Record<string, string> = {
-    USDT: '0xb1B83B96402978F212af2415b1BffAad0D2aF1bb', // Test USDT on Sepolia (from original CreateGiftCard.tsx)
-    // USDT: '0xd1545a2f2d3bc9EeCFAd0634ee6e79Cea122DEc8', // Test USDT on Sepolia (from original CreateGiftCard.tsx)
-    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Placeholder (Mainnet address), replace with Sepolia USDC address
-    DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F', // Placeholder (Mainnet address), replace with Sepolia DAI address
+    USDT: '0xf99F557Ed59F884F49D923643b1A48F834a90653', // Sepolia USDT
+    USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia USDC (replace with actual)
+    DAI: '0x68194a729C2450ad26072b3D33ADaCbcef39D574', // Sepolia DAI (replace with actual)
+  };
+
+  // Token decimals map (assumes 6 for USDT/USDC/DAI)
+  const tokenDecimals: Record<string, number> = {
+    USDT: 6,
+    USDC: 6,
+    DAI: 6,
   };
 
   const tokens = Object.keys(tokenMap);
   const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+
+  // Check allowance and approve if needed
+  const checkAndApprove = async (tokenAddress: string, amount: string) => {
+    if (!publicClient || !walletClient || !address) return false;
+
+    try {
+      // Initialize Ethers.js provider and signer
+      const provider = new BrowserProvider(walletClient.transport);
+      const signer = await provider.getSigner();
+      const tokenContract = new Contract(tokenAddress, ERC20_ABI, signer);
+
+      // Get decimals
+      const decimals = tokenDecimals[form.token] || 6;
+      const amountBN = parseUnits(amount, decimals);
+
+      // Check allowance
+      const allowance = await tokenContract.allowance(address, RELAYER_ADDRESS);
+      if (BigInt(allowance.toString()) < BigInt(amountBN.toString())) {
+        setIsApproving(true);
+        // Approve the exact amount
+        const tx = await tokenContract.approve(RELAYER_ADDRESS, amountBN);
+        // Optionally, approve MaxUint256 to avoid future approvals
+        // const tx = await tokenContract.approve(RELAYER_ADDRESS, MaxUint256);
+        await tx.wait();
+        setIsApproving(false);
+        return true;
+      }
+      return true;
+    } catch (err: any) {
+      setError(`Approval failed: ${err.message || 'Unknown error'}`);
+      setIsApproving(false);
+      return false;
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -79,13 +157,19 @@ export default function CreateGiftCard() {
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
     try {
+      // Check and approve tokens
+      const tokenAddress = tokenMap[form.token];
+      const isApproved = await checkAndApprove(tokenAddress, form.amount);
+      if (!isApproved) return;
+
+      // Call backend
+      setIsLoading(true);
       const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
       const response = await axios.post('http://localhost:3000/api/create-gift', {
-        token: tokenMap[form.token],
+        token: tokenAddress,
         amount: form.amount,
         expiry: expiryTimestamp,
         message: form.message,
@@ -108,8 +192,12 @@ export default function CreateGiftCard() {
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'An error occurred.';
-      if (errorMessage.includes('Invalid token address')) {
+      if (errorMessage.includes('Creator needs to approve relayer first')) {
+        setError('Please approve the relayer to spend your tokens.');
+      } else if (errorMessage.includes('Invalid token address')) {
         setError('The selected token is not supported on this network.');
+      } else if (errorMessage.includes('Insufficient token balance')) {
+        setError('Insufficient token balance. Please check your wallet.');
       } else {
         setError(errorMessage);
       }
@@ -212,10 +300,10 @@ export default function CreateGiftCard() {
           {/* Create Gift Card Button */}
           <button
             type="submit"
-            disabled={isLoading || !address}
+            disabled={isLoading || isApproving || !address}
             className="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-3 rounded-lg transition mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Creating Gift...' : 'Create Gift Card'}
+            {isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
           </button>
         </form>
 
@@ -228,7 +316,7 @@ export default function CreateGiftCard() {
                 card={{
                   cardName: `Gift Card #${gift.giftID.slice(0, 4)}`,
                   status: 'Pending',
-                  amount: parseFloat(gift.amount),
+                  amount: Number(parseUnits(gift.amount, 6)),
                   token: gift.token,
                   expiry: format(new Date(gift.expiry * 1000), 'yyyy-MM-dd'),
                   giftCode: gift.giftID,
