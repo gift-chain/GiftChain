@@ -2,12 +2,11 @@
 import React, { useState } from "react";
 import { Copy } from "lucide-react";
 import { format } from "date-fns";
-import { ethers } from "ethers";
-import { reclaimGift } from "../utils/reclaimGift";
+import { useNavigate } from "react-router-dom";
 
 type GiftCard = {
   cardName: string;
-  status: "NONE" | "PENDING" | "CLAIMED" | "RECLAIMED" | "EXPIRED"; // EXPIRED for UI only
+  status: "NONE" | "PENDING" | "CLAIMED" | "RECLAIMED" | "EXPIRED";
   amount: number;
   token: string;
   expiry: string; // ISO date string (e.g., "2025-04-30T12:00:00Z")
@@ -23,12 +22,12 @@ export const GiftCard = ({ card, userAddress }: GiftCardProps) => {
   const { cardName, status, amount, token, expiry, giftCode } = card;
   const [copied, setCopied] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isReclaiming, setIsReclaiming] = useState(false);
-  const [reclaimError, setReclaimError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Check if card is expired
   const isExpired = new Date(expiry) < new Date();
-  const displayStatus = isExpired ? "EXPIRED" : status;
+  // Prioritize RECLAIMED status, then check expiry, then use status
+  const displayStatus = status === "RECLAIMED" ? "RECLAIMED" : isExpired ? "EXPIRED" : status;
   // Assume connected user is the creator (since giftsCreated is queried for them)
   const isCreator = !!userAddress;
 
@@ -70,29 +69,10 @@ export const GiftCard = ({ card, userAddress }: GiftCardProps) => {
     }
   };
 
-  const handleReclaim = async (e: React.MouseEvent) => {
+  const handleReclaim = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isCreator || !isExpired) return;
-
-    setIsReclaiming(true);
-    setReclaimError(null);
-
-    // Hash the gift code
-    const codeHash = ethers.keccak256(ethers.toUtf8Bytes(giftCode));
-    console.log("Raw giftCode:", giftCode);
-    console.log("Computed codeHash:", codeHash);
-    // console.log("Expected subgraph gift.id:", card.id); // Add card.id to GiftCard type if needed
-  
-
-    const result = await reclaimGift(codeHash, userAddress!);
-    if (result.success) {
-      alert("Gift reclaimed successfully!");
-      window.location.reload(); // Temporary; replace with subgraph refetch
-    } else {
-      setReclaimError(result.errorMessage || "Failed to reclaim gift.");
-    }
-
-    setIsReclaiming(false);
+    // Navigate to ReclaimGift page with giftCode as query parameter
+    navigate(`/reclaimGift?code=${encodeURIComponent(giftCode)}`);
   };
 
   // Format expiry date and time (e.g., "Apr 27, 2025 8:35 PM")
@@ -169,17 +149,13 @@ export const GiftCard = ({ card, userAddress }: GiftCardProps) => {
             <span>{expiryDateTime}</span>
           </div>
 
-          {isExpired && isCreator && displayStatus !== "RECLAIMED" && (
+          {isExpired && isCreator && status !== "RECLAIMED" && (
             <button
               onClick={handleReclaim}
-              disabled={isReclaiming}
-              className="mt-2 w-full py-2 rounded-lg bg-gradient-to-r from-[#9812C2] to-[#B315E6] text-sm font-semibold text-white shadow-md hover:shadow-lg transition hover:scale-105 disabled:opacity-50"
+              className="mt-2 w-full py-2 rounded-lg bg-gradient-to-r from-[#9812C2] to-[#B315E6] text-sm font-semibold text-white shadow-md hover:shadow-lg transition hover:scale-105"
             >
-              {isReclaiming ? "Reclaiming..." : "Reclaim Now"}
+              Reclaim Now
             </button>
-          )}
-          {reclaimError && (
-            <p className="text-red-400 text-sm mt-2">{reclaimError}</p>
           )}
         </div>
 

@@ -1,12 +1,14 @@
+// src/components/ReclaimGift.tsx
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import { useAccount } from 'wagmi';
-import GiftChainABI from '../abi/giftChainABI.json'; // ABI of the smart contract
+import { useAccount, useWalletClient } from 'wagmi';
+import { createPublicClient, http } from 'viem';
+import { sepolia } from 'viem/chains';
+import GiftChainABI from '../abi/giftChainABI.json';
 
 const CONTRACT_ADDRESS = '0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473';
 const PROVIDER_URL = 'https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX';
 
-// Enum to match contract status
 enum GiftStatus {
   NONE = 0,
   PENDING = 1,
@@ -18,26 +20,32 @@ interface GiftDetails {
   isValid: boolean;
   status: GiftStatus;
   token: string;
-  amount: string; // Formatted amount (e.g., in USDC with decimals)
+  amount: string;
   message: string;
   expiry: number;
   timeCreated: number;
-  creator: string; // Hashed creator (bytes32)
+  creator: string;
   errorMessage?: string;
 }
 
 const ReclaimGift: React.FC = () => {
-  const { address: walletAddress } = useAccount();
+  const { address: walletAddress, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const [code, setCode] = useState<string>('');
   const [errors, setErrors] = useState<{ code?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [giftDetails, setGiftDetails] = useState<GiftDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [txSuccess, setTxSuccess] = useState<boolean>(false);
+  const [txHash, setTxHash] = useState<string>('');
 
-  // Initialize read-only provider
   const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
   const contract = new ethers.Contract(CONTRACT_ADDRESS, GiftChainABI, provider);
+
+  const publicClient = createPublicClient({
+    chain: sepolia,
+    transport: http(PROVIDER_URL),
+  });
 
   const validateGift = async (rawCode: string): Promise<GiftDetails> => {
     try {
@@ -45,16 +53,14 @@ const ReclaimGift: React.FC = () => {
       const codeHash = ethers.keccak256(ethers.toUtf8Bytes(rawCode));
       console.log('Computed codeHash:', codeHash);
 
-      // Validate gift
       const isValid = await contract.validateGift(codeHash);
       console.log('Validation result:', isValid);
 
-      // Fetch gift details from the gifts mapping
       const gift = await contract.gifts(codeHash);
       const status = Number(gift.status);
-      const amount = ethers.formatUnits(gift.amount, 6); // Assuming USDC with 6 decimals
+      const amount = ethers.formatUnits(gift.amount, 6);
 
-      return {
+      const details = {
         isValid,
         status,
         token: gift.token,
@@ -64,6 +70,8 @@ const ReclaimGift: React.FC = () => {
         timeCreated: Number(gift.timeCreated),
         creator: gift.creator,
       };
+      console.log('Gift details:', details);
+      return details;
     } catch (error: any) {
       console.error('Validation error:', error);
       let errorMessage = 'An unknown error occurred.';
@@ -139,15 +147,28 @@ const ReclaimGift: React.FC = () => {
   };
 
   const isReclaimable = (details: GiftDetails): boolean => {
-    if (!details.isValid || details.status !== GiftStatus.PENDING) {
+    if (!details.isValid) {
+      console.log('Not reclaimable: Invalid gift');
+      return false;
+    }
+    if (details.status !== GiftStatus.PENDING) {
+      console.log('Not reclaimable: Status not PENDING', { status: details.status });
       return false;
     }
     if (details.expiry * 1000 > Date.now()) {
-      return false; // Not expired yet
+      console.log('Not reclaimable: Not expired', { expiry: details.expiry, now: Math.floor(Date.now() / 1000) });
+      return false;
     }
-    if (details.creator !== ethers.keccak256(ethers.toUtf8Bytes(walletAddress || ''))) {
-      return false; // Not the creator
+    if (!walletAddress) {
+      console.log('Not reclaimable: No wallet address');
+      return false;
     }
+    const hashedAddress = ethers.keccak256(ethers.getAddress(walletAddress));
+    if (details.creator.toLowerCase() !== hashedAddress.toLowerCase()) {
+      console.log('Not reclaimable: Creator mismatch', { creator: details.creator, hashedAddress });
+      return false;
+    }
+    console.log('Gift is reclaimable');
     return true;
   };
 
@@ -176,29 +197,59 @@ const ReclaimGift: React.FC = () => {
   };
 
   const handleReclaimGift = async () => {
+    console.log('handleReclaimGift called with giftDetails:', giftDetails);
     if (!giftDetails || !isReclaimable(giftDetails)) {
+      console.log('Reclaim blocked: Gift not reclaimable');
       alert('Please validate a reclaimable gift first');
       return;
     }
 
-    if (!walletAddress) {
+    if (!walletClient || !isConnected) {
+      console.log('Reclaim blocked: No wallet client or not connected');
       alert('Please connect your wallet to reclaim the gift');
       return;
     }
 
     try {
-      if (!window.ethereum) {
-        alert('Please install MetaMask or another wallet provider');
-        return;
+      setIsSubmitting(true);
+      const codeHash = ethers.keccak256(ethers.toUtf8Bytes(code));
+      console.log('Reclaiming gift with codeHash:', codeHash);
+
+      // Re-validate gift state before reclaiming
+      const preValidation = await validateGift(code);
+      console.log('Pre-reclaim validation:', preValidation);
+      if (!isReclaimable(preValidation)) {
+        throw new Error('Gift is no longer reclaimable. Please re-validate.');
       }
 
-      setIsSubmitting(true);
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contractWithSigner = new ethers.Contract(CONTRACT_ADDRESS, GiftChainABI, signer);
+      const txHash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: GiftChainABI,
+        functionName: 'reclaimGift',
+        args: [codeHash], // Ensure codeHash is bytes32
+        account: walletAddress as `0x${string}`,
+        gas: 300000, // Specify gas limit
+      });
+      console.log('Transaction sent:', txHash);
+      setTxHash(txHash);
 
-      const tx = await contractWithSigner.reclaimGift(code);
-      await tx.wait();
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+      console.log('Transaction receipt:', receipt);
+
+      if (receipt.status === 'reverted') {
+        // Try to decode revert reason
+        let errorMessage = 'Transaction reverted for an unknown reason.';
+        try {
+          const errorData = receipt.logs.length > 0 ? receipt.logs[0].data : '';
+          const decodedError = ethers.Interface.from(GiftChainABI).parseError(errorData || '0x');
+          if (decodedError) {
+            errorMessage = `Transaction reverted: ${decodedError.name} - ${decodedError.args.join(', ')}`;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse revert reason:', parseError);
+        }
+        throw new Error(errorMessage);
+      }
 
       setGiftDetails({
         ...giftDetails,
@@ -210,23 +261,22 @@ const ReclaimGift: React.FC = () => {
     } catch (error: any) {
       console.error('Error reclaiming gift:', error);
       let errorMessage = 'Transaction failed. Please try again.';
-      if (error.reason || error.data?.message) {
-        const reason = error.reason || error.data?.message;
-        if (reason.includes('GiftNotFound')) {
-          errorMessage = 'Gift card not found.';
-        } else if (reason.includes('GiftAlreadyRedeemed') || reason.includes('SUCCESSFUL')) {
-          errorMessage = 'This gift card has already been redeemed.';
-        } else if (reason.includes('GiftAlreadyReclaimed') || reason.includes('RECLAIMED')) {
-          errorMessage = 'This gift card has already been reclaimed.';
-        } else if (reason.includes('GiftExpired')) {
-          errorMessage = 'This gift card is not expired yet and cannot be reclaimed.';
-        } else if (reason.includes('InvalidGiftStatus')) {
-          errorMessage = 'You are not the creator of this gift or it has an invalid status.';
-        } else {
-          errorMessage = `Contract error: ${reason}`;
-        }
-      } else if (error.message) {
-        errorMessage = `Provider error: ${error.message}`;
+      if (error.message?.includes('GiftNotFound') || error.cause?.data === '0x615b0ed0') {
+        errorMessage = 'Gift card not found.';
+      } else if (error.message?.includes('GiftAlreadyRedeemed') || error.message?.includes('SUCCESSFUL')) {
+        errorMessage = 'This gift card has already been redeemed.';
+      } else if (error.message?.includes('GiftAlreadyReclaimed') || error.message?.includes('RECLAIMED')) {
+        errorMessage = 'This gift card has already been reclaimed.';
+      } else if (error.message?.includes('GiftNotExpired')) {
+        errorMessage = 'This gift card is not expired yet and cannot be reclaimed.';
+      } else if (error.message?.includes('InvalidGiftStatus')) {
+        errorMessage = 'The gift is not in a PENDING state or has an invalid status.';
+      } else if (error.message?.includes('NotCreator')) {
+        errorMessage = 'You are not the creator of this gift.';
+      } else if (error.message?.includes('execution reverted')) {
+        errorMessage = `Contract execution reverted: ${error.message || 'Unknown reason'}`;
+      } else {
+        errorMessage = `Contract error: ${error.message || 'Unknown error'}`;
       }
       setErrors({ code: errorMessage });
     } finally {
@@ -250,6 +300,7 @@ const ReclaimGift: React.FC = () => {
                 setCode(e.target.value);
                 setGiftDetails(null);
                 setTxSuccess(false);
+                setTxHash('');
               }}
               className="w-full bg-indigo-900/50 text-white rounded-l-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
               placeholder="Enter gift code (e.g., c2f1-eb68-edd1-89ba)"
@@ -287,6 +338,19 @@ const ReclaimGift: React.FC = () => {
             </button>
           </div>
           {errors.code && <p className="text-red-400 mt-1 text-sm">{errors.code}</p>}
+          {txHash && (
+            <p className="text-indigo-200 mt-1 text-sm">
+              Transaction Hash:{' '}
+              <a
+                href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {txHash.slice(0, 6)}...{txHash.slice(-4)}
+              </a>
+            </p>
+          )}
         </div>
 
         {giftDetails && (
@@ -352,7 +416,8 @@ const ReclaimGift: React.FC = () => {
                 <div className="mb-4">
                   <h4 className="text-indigo-200 text-sm mb-1">Creator</h4>
                   <p className="text-white text-sm truncate">
-                    {giftDetails.creator === ethers.keccak256(ethers.toUtf8Bytes(walletAddress))
+                    {giftDetails.creator.toLowerCase() ===
+                    ethers.keccak256(ethers.getAddress(walletAddress)).toLowerCase()
                       ? 'You (matched)'
                       : 'Not matched'}
                   </p>

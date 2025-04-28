@@ -16,7 +16,7 @@ const Header = () => {
     }
 
     return (
-        <div className="text-white -mb-[100px]">
+        <div className="text-white -mb-[80px]">
             <Container className="flex justify-between items-center py-2 lg:py-5">
                 <Link to="/" className="text-2xl font-bold">GiftChain</Link>
                 {isConnected ? (
