@@ -92,12 +92,12 @@ GiftChain/
 ### Steps
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/GiftChain.git
-   cd GiftChain
+```bash
+git clone https://github.com/your-repo/GiftChain.git
+cd GiftChain
+```
    
 2. Install dependencies for the frontend:
-
 ```bash
 cd FrontEnd
 npm install
