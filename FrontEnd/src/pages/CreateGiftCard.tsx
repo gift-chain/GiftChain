@@ -78,7 +78,7 @@ export default function CreateGiftCard() {
 
   // Token map (Sepolia testnet addresses)
   const tokenMap: Record<string, string> = {
-    USDT: '0xf99F557Ed59F884F49D923643b1A48F834a90653', // Sepolia USDT
+    USDT: '0xd1545a2f2d3bc9EeCFAd0634ee6e79Cea122DEc8', // Sepolia USDT
     USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia USDC (replace with actual)
     DAI: '0x68194a729C2450ad26072b3D33ADaCbcef39D574', // Sepolia DAI (replace with actual)
   };
