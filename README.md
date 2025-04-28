@@ -56,7 +56,7 @@ GiftChain is designed to make crypto gifting as simple as sending a message. It 
 
 ## Project Structure
 
-```plaintext
+
 GiftChain/
 ├── FrontEnd/               # React-based frontend
 │   ├── src/
