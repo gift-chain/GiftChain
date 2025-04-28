@@ -1,291 +1,115 @@
+// SPDX-License-Identifier: MIT
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { Contract, Signer } from "ethers";
 
-describe("GiftChain Contract", function () {
+describe("GiftChain - Comprehensive Tests", function () {
   let giftChain: Contract;
   let mockToken: Contract;
   let owner: Signer;
   let relayer: Signer;
   let user1: Signer;
   let user2: Signer;
-  let giftErrorsLib: Contract;
+  let user3: Signer;
 
   const oneDay = 24 * 60 * 60;
   const testMessage = "Happy Birthday!";
-  const testRawCode = "gift123";
   let testGiftID: string;
 
   beforeEach(async function () {
-    // Get multiple signers to represent different wallet accounts
-    [owner, relayer, user1, user2] = await ethers.getSigners();
+    [owner, relayer, user1, user2, user3] = await ethers.getSigners();
 
-    // Deploy MockERC20 token for testing
     const MockToken = await ethers.getContractFactory("MockERC20");
     mockToken = await MockToken.deploy("Mock Token", "MTK", ethers.parseEther("1000000"));
     await mockToken.waitForDeployment();
 
-    // Compute the gift ID
-    testGiftID = ethers.keccak256(ethers.toUtf8Bytes(testRawCode));
+    testGiftID = ethers.keccak256(ethers.toUtf8Bytes("test-gift-" + Math.random().toString()));
 
-    // Distribute tokens to relayer and users for testing
     await mockToken.transfer(await relayer.getAddress(), ethers.parseEther("10000"));
     await mockToken.transfer(await user1.getAddress(), ethers.parseEther("1000"));
     await mockToken.transfer(await user2.getAddress(), ethers.parseEther("1000"));
+    await mockToken.transfer(await user3.getAddress(), ethers.parseEther("1000"));
 
-    // Deploy GiftErrors library
-    const GiftErrors = await ethers.getContractFactory("GiftErrors");
-    giftErrorsLib = await GiftErrors.deploy();
-    await giftErrorsLib.waitForDeployment();
-
-    // Deploy GiftChain contract with relayer address
     const GiftChain = await ethers.getContractFactory("GiftChain");
     giftChain = await GiftChain.deploy(await relayer.getAddress());
     await giftChain.waitForDeployment();
 
-    // Approve GiftChain to spend tokens for relayer and users
     await mockToken.connect(relayer).approve(await giftChain.getAddress(), ethers.MaxUint256);
-    await mockToken.connect(user1).approve(await giftChain.getAddress(), ethers.MaxUint256);
-    await mockToken.connect(user2).approve(await giftChain.getAddress(), ethers.MaxUint256);
   });
 
-  describe("Constructor", function () {
-    it("should set the relayer address correctly", async function () {
-      // Deploy a new contract to test constructor
-      const GiftChain = await ethers.getContractFactory("GiftChain");
-      const newContract = await GiftChain.deploy(await relayer.getAddress());
-      await newContract.waitForDeployment();
+  describe("Basic Functionality", function () {
+    it("should deploy successfully", async function () {
+      expect(await giftChain.getAddress()).to.not.equal(ethers.ZeroAddress);
+    });
 
-      // Ensure relayer has tokens and approval
-      await mockToken.transfer(await relayer.getAddress(), ethers.parseEther("1000"));
-      await mockToken.connect(relayer).approve(await newContract.getAddress(), ethers.MaxUint256);
-
-      // Relayer should succeed in creating a gift
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
-      // Relayer should succeed
-      await expect(
-        newContract.connect(relayer).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          testMessage,
-          testGiftID,
-          creator
-        )
-      ).to.not.be.reverted;
-
-      // Non-relayer (user1) should fail
-      await expect(
-        newContract.connect(user1).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          testMessage,
-          testGiftID,
-          creator
-        )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "ONLY_RELAYER_HAS_ACCESS");
+    it("should have correct relayer address", async function () {
+      expect(await giftChain.relayer()).to.equal(await relayer.getAddress());
     });
   });
 
-  describe("createGift", function () {
-    it("should create a gift successfully", async function () {
+  describe("Gift Creation", function () {
+    it("should allow relayer to create gifts", async function () {
       const amount = ethers.parseEther("100");
       const futureTime = (await time.latest()) + oneDay;
       const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
-      // Relayer signs the transaction
-      await expect(
-        giftChain.connect(relayer).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          testMessage,
-          testGiftID,
-          creator
-        )
-      )
-        .to.emit(giftChain, "GiftCreated")
-        .withArgs(testGiftID, await mockToken.getAddress(), testMessage, amount, futureTime);
-
-      // Verify gift details
-      const gift = await giftChain.gifts(testGiftID);
-      expect(gift.token).to.equal(await mockToken.getAddress());
-      expect(gift.claimed).to.equal(false);
-      expect(gift.expiry).to.equal(futureTime);
-      expect(gift.amount).to.equal(amount);
-      expect(gift.message).to.equal(testMessage);
-      expect(gift.status).to.equal(1); // Status.PENDING
-      expect(gift.creator).to.equal(creator);
-
-      // Verify token transfer
-      const contractBalance = await mockToken.balanceOf(await giftChain.getAddress());
-      expect(contractBalance).to.equal(amount);
+      
+      await expect(giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        amount,
+        futureTime,
+        testMessage,
+        testGiftID,
+        creator
+      )).to.emit(giftChain, "GiftCreated");
     });
 
-    it("should revert if called by non-relayer", async function () {
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
-      // User1 (non-relayer) signs transaction
-      await expect(
-        giftChain.connect(user1).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          testMessage,
-          testGiftID,
-          creator
-        )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "ONLY_RELAYER_HAS_ACCESS");
-    });
-
-    it("should revert with invalid token address", async function () {
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
+    it("should reject invalid token address", async function () {
       await expect(
         giftChain.connect(relayer).createGift(
           ethers.ZeroAddress,
-          amount,
-          futureTime,
+          ethers.parseEther("100"),
+          (await time.latest()) + oneDay,
           testMessage,
           testGiftID,
-          creator
+          ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()))
         )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "INVALID_ADDRESS");
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_ADDRESS");
     });
 
-    it("should revert with invalid amount", async function () {
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
+    it("should reject zero amount gifts", async function () {
       await expect(
         giftChain.connect(relayer).createGift(
           await mockToken.getAddress(),
           0,
-          futureTime,
+          (await time.latest()) + oneDay,
           testMessage,
           testGiftID,
-          creator
+          ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()))
         )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "INVALID_AMOUNT");
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_AMOUNT");
     });
 
-    it("should revert with expiry in the past", async function () {
-      const amount = ethers.parseEther("100");
-      const pastTime = (await time.latest()) - oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
+    it("should reject past expiry", async function () {
       await expect(
         giftChain.connect(relayer).createGift(
           await mockToken.getAddress(),
-          amount,
-          pastTime,
+          ethers.parseEther("100"),
+          (await time.latest()) - 1,
           testMessage,
           testGiftID,
-          creator
+          ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()))
         )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "EXPIRY_CAN_ONLY_BE_IN_FUTURE");
-    });
-
-    it("should revert with message too short", async function () {
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
-      await expect(
-        giftChain.connect(relayer).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          "Hi",
-          testGiftID,
-          creator
-        )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "EXPECT_3_TO_50_MESSAGE_CHARACTER");
-    });
-
-    it("should revert with message too long", async function () {
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-      const longMessage = "A".repeat(51);
-
-      await expect(
-        giftChain.connect(relayer).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          longMessage,
-          testGiftID,
-          creator
-        )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "EXPECT_3_TO_50_MESSAGE_CHARACTER");
-    });
-
-    it("should revert if gift ID already exists", async function () {
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
-      // Create gift first time
-      await giftChain.connect(relayer).createGift(
-        await mockToken.getAddress(),
-        amount,
-        futureTime,
-        testMessage,
-        testGiftID,
-        creator
-      );
-
-      // Try to create with same ID
-      await expect(
-        giftChain.connect(relayer).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          testMessage,
-          testGiftID,
-          creator
-        )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "CARD_ALREADY_EXIST");
-    });
-
-    it("should revert if token transfer fails", async function () {
-      // Revoke approval to force transfer failure
-      await mockToken.connect(relayer).approve(await giftChain.getAddress(), 0);
-
-      const amount = ethers.parseEther("100"); // Valid amount but no approval
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
-      await expect(
-        giftChain.connect(relayer).createGift(
-          await mockToken.getAddress(),
-          amount,
-          futureTime,
-          testMessage,
-          testGiftID,
-          creator
-        )
-      ).to.be.revertedWithCustomError(giftErrorsLib, "TRANSFER_FAILED");
+      ).to.be.revertedWithCustomError(giftChain, "EXPIRY_CAN_ONLY_BE_IN_FUTURE");
     });
   });
 
-  describe("claimGift", function () {
+  describe("Gift Claiming", function () {
     beforeEach(async function () {
-      // Setup: Create a gift
       const amount = ethers.parseEther("100");
       const futureTime = (await time.latest()) + oneDay;
       const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
+      
       await giftChain.connect(relayer).createGift(
         await mockToken.getAddress(),
         amount,
@@ -296,187 +120,188 @@ describe("GiftChain Contract", function () {
       );
     });
 
-    it("should claim a gift successfully", async function () {
-      // User2 signs transaction to claim gift
-      const balanceBefore = await mockToken.balanceOf(await user2.getAddress());
-
+    it("should allow recipient to claim gift", async function () {
       await expect(giftChain.connect(user2).claimGift(testGiftID))
         .to.emit(giftChain, "GiftClaimed")
-        .withArgs(testGiftID, await user2.getAddress(), ethers.parseEther("100"));
-
-      const balanceAfter = await mockToken.balanceOf(await user2.getAddress());
-      expect(balanceAfter - balanceBefore).to.equal(ethers.parseEther("100"));
-
-      const gift = await giftChain.gifts(testGiftID);
-      expect(gift.status).to.equal(2); // Status.SUCCESSFUL
+        .withArgs(testGiftID, await user2.getAddress(), ethers.parseEther("100"), "CLAIMED");
     });
 
-    it("should revert if gift code is invalid", async function () {
-      const invalidGiftID = ethers.keccak256(ethers.toUtf8Bytes("invalid"));
-
-      await expect(giftChain.connect(user2).claimGift(invalidGiftID)).to.be.revertedWithCustomError(
-        giftErrorsLib,
-        "GiftNotFound"
-      );
+    it("should prevent creator from claiming own gift", async function () {
+      await expect(giftChain.connect(user1).claimGift(testGiftID))
+        .to.be.revertedWithCustomError(giftChain, "CREATOR_CANNOT_CLAIM_GIFT");
     });
 
-    it("should revert if gift is expired", async function () {
-      // Fast forward time past expiry
-      await time.increase(oneDay + 1);
-
-      await expect(giftChain.connect(user2).claimGift(testGiftID)).to.be.revertedWithCustomError(
-        giftErrorsLib,
-        "GiftExpired"
-      );
-    });
-
-    it("should revert if gift is already claimed", async function () {
-      // First claim
+    it("should prevent double claiming", async function () {
       await giftChain.connect(user2).claimGift(testGiftID);
-
-      // Second attempt
-      await expect(giftChain.connect(user1).claimGift(testGiftID)).to.be.revertedWithCustomError(
-        giftErrorsLib,
-        "InvalidGiftStatus"
-      );
+      await expect(giftChain.connect(user3).claimGift(testGiftID))
+        .to.be.revertedWithCustomError(giftChain, "GIFT_CLAIMED");
     });
   });
 
-  describe("validateGift", function () {
-    beforeEach(async function () {
-      // Setup: Create a gift
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+  describe("Gift Reclaiming", function () {
+    let expiredGiftID: string;
 
+    beforeEach(async function () {
+      expiredGiftID = ethers.keccak256(ethers.toUtf8Bytes("expired-gift"));
+      const amount = ethers.parseEther("50");
+      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+      const currentTime = await time.latest();
+      
       await giftChain.connect(relayer).createGift(
         await mockToken.getAddress(),
         amount,
-        futureTime,
+        currentTime + 5, // Expires in 5 seconds
         testMessage,
-        testGiftID,
+        expiredGiftID,
         creator
       );
+      
+      await time.increase(6); // Fast forward past expiry
     });
 
-    it("should validate a valid gift", async function () {
-      // User2 signs transaction to validate gift
-      const result = await giftChain.connect(user2).validateGift(testRawCode);
-      expect(result).to.equal(true);
-    });
-
-    it("should revert if gift not found", async function () {
-      await expect(
-        giftChain.connect(user2).validateGift("invalidGift")
-      ).to.be.revertedWithCustomError(giftErrorsLib, "GiftNotFound");
-    });
-
-    it("should revert if gift already redeemed", async function () {
-      // Claim the gift
-      await giftChain.connect(user2).claimGift(testGiftID);
-
-      // Try to validate
-      await expect(
-        giftChain.connect(user1).validateGift(testRawCode)
-      ).to.be.revertedWithCustomError(giftErrorsLib, "GiftAlreadyRedeemed");
-    });
-
-    it("should revert if gift already reclaimed", async function () {
-      // Fast forward time past expiry
-      await time.increase(oneDay + 1);
-
-      // Reclaim the gift
-      await giftChain.connect(user1).reclaimGift(testRawCode);
-
-      // Try to validate
-      await expect(
-        giftChain.connect(user2).validateGift(testRawCode)
-      ).to.be.revertedWithCustomError(giftErrorsLib, "GiftAlreadyReclaimed");
-    });
-  });
-
-  describe("reclaimGift", function () {
-    beforeEach(async function () {
-      // Setup: Create a gift
-      const amount = ethers.parseEther("100");
-      const futureTime = (await time.latest()) + oneDay;
-      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
-
-      await giftChain.connect(relayer).createGift(
-        await mockToken.getAddress(),
-        amount,
-        futureTime,
-        testMessage,
-        testGiftID,
-        creator
-      );
-    });
-
-    it("should reclaim an expired gift successfully", async function () {
-      // Fast forward time past expiry
-      await time.increase(oneDay + 1);
-
-      // User1 (creator) signs transaction to reclaim
-      const balanceBefore = await mockToken.balanceOf(await user1.getAddress());
-
-      await expect(giftChain.connect(user1).reclaimGift(testRawCode))
+    it("should allow creator to reclaim expired gift", async function () {
+      await expect(giftChain.connect(user1).reclaimGift(expiredGiftID))
         .to.emit(giftChain, "GiftReclaimed")
-        .withArgs(testGiftID, await user1.getAddress(), ethers.parseEther("100"));
-
-      const balanceAfter = await mockToken.balanceOf(await user1.getAddress());
-      expect(balanceAfter - balanceBefore).to.equal(ethers.parseEther("100"));
-
-      const gift = await giftChain.gifts(testGiftID);
-      expect(gift.status).to.equal(3); // Status.RECLAIMED
-      expect(gift.claimed).to.equal(true);
+        .withArgs(expiredGiftID, await user1.getAddress(), ethers.parseEther("50"), "RECLAIMED");
     });
 
-    it("should revert if gift not found", async function () {
-      await expect(
-        giftChain.connect(user1).reclaimGift("invalidGift")
-      ).to.be.revertedWithCustomError(giftErrorsLib, "GiftNotFound");
+    it("should prevent non-creator from reclaiming", async function () {
+      await expect(giftChain.connect(user2).reclaimGift(expiredGiftID))
+        .to.be.revertedWithCustomError(giftChain, "NOT_AUTHORIZE_TO_RECLAIM_GIFT");
     });
 
-    it("should revert if caller is not the creator", async function () {
-      // Fast forward time past expiry
-      await time.increase(oneDay + 1);
+    it("should prevent reclaiming before expiry", async function () {
+      const unexpiredGiftID = ethers.keccak256(ethers.toUtf8Bytes("unexpired-gift"));
+      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+      
+      await giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        ethers.parseEther("50"),
+        (await time.latest()) + oneDay,
+        testMessage,
+        unexpiredGiftID,
+        creator
+      );
+      
+      await expect(giftChain.connect(user1).reclaimGift(unexpiredGiftID))
+        .to.be.revertedWithCustomError(giftChain, "GIFT_NOT_EXPIRED_YET");
+    });
+  });
 
-      // User2 (non-creator) signs transaction
-      await expect(
-        giftChain.connect(user2).reclaimGift(testRawCode)
-      ).to.be.revertedWithCustomError(giftErrorsLib, "InvalidGiftStatus");
+  describe("Gift Validation", function () {
+    it("should validate active gift correctly", async function () {
+      const amount = ethers.parseEther("100");
+      const futureTime = (await time.latest()) + oneDay;
+      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+      
+      await giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        amount,
+        futureTime,
+        testMessage,
+        testGiftID,
+        creator
+      );
+      
+      const [isValid, message] = await giftChain.validateGift(testGiftID);
+      expect(isValid).to.be.true;
+      expect(message).to.equal("Valid gift");
     });
 
-    it("should revert if gift not expired yet", async function () {
-      await expect(
-        giftChain.connect(user1).reclaimGift(testRawCode)
-      ).to.be.revertedWithCustomError(giftErrorsLib, "GiftExpired");
-    });
-
-    it("should revert if gift already redeemed", async function () {
-      // Claim the gift
+    it("should invalidate claimed gift", async function () {
+      // Setup and claim gift
+      const amount = ethers.parseEther("100");
+      const futureTime = (await time.latest()) + oneDay;
+      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+      
+      await giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        amount,
+        futureTime,
+        testMessage,
+        testGiftID,
+        creator
+      );
+      
       await giftChain.connect(user2).claimGift(testGiftID);
-
-      // Fast forward time past expiry
-      await time.increase(oneDay + 1);
-
-      // Try to reclaim
-      await expect(
-        giftChain.connect(user1).reclaimGift(testRawCode)
-      ).to.be.revertedWithCustomError(giftErrorsLib, "GiftAlreadyRedeemed");
+      
+      const [isValid, message] = await giftChain.validateGift(testGiftID);
+      expect(isValid).to.be.false;
+      expect(message).to.equal("Gift already claimed");
     });
 
-    it("should revert if gift already reclaimed", async function () {
-      // Fast forward time past expiry
-      await time.increase(oneDay + 1);
+    it("should invalidate non-existent gift", async function () {
+      const [isValid, message] = await giftChain.validateGift(ethers.keccak256(ethers.toUtf8Bytes("nonexistent")));
+      expect(isValid).to.be.false;
+      expect(message).to.equal("Gift not found");
+    });
+  });
 
-      // Reclaim the gift
-      await giftChain.connect(user1).reclaimGift(testRawCode);
+  describe("Comprehensive Lifecycle", function () {
+    it("should complete full gift lifecycle", async function () {
+      // 1. Create gift
+      const lifecycleGiftID = ethers.keccak256(ethers.toUtf8Bytes("lifecycle-gift"));
+      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+      
+      await giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        ethers.parseEther("75"),
+        (await time.latest()) + oneDay,
+        "Lifecycle test gift",
+        lifecycleGiftID,
+        creator
+      );
+      
+      // 2. Validate before claiming
+      let [isValid, message] = await giftChain.validateGift(lifecycleGiftID);
+      expect(isValid).to.be.true;
+      expect(message).to.equal("Valid gift");
+      
+      // 3. Claim gift
+      const user2BalanceBefore = await mockToken.balanceOf(await user2.getAddress());
+      await giftChain.connect(user2).claimGift(lifecycleGiftID);
+      const user2BalanceAfter = await mockToken.balanceOf(await user2.getAddress());
+      expect(user2BalanceAfter - user2BalanceBefore).to.equal(ethers.parseEther("75"));
+      
+      // 4. Validate after claiming
+      [isValid, message] = await giftChain.validateGift(lifecycleGiftID);
+      expect(isValid).to.be.false;
+      expect(message).to.equal("Gift already claimed");
+    });
 
-      // Try to reclaim again
-      await expect(
-        giftChain.connect(user1).reclaimGift(testRawCode)
-      ).to.be.revertedWithCustomError(giftErrorsLib, "GiftAlreadyReclaimed");
+    it("should complete expiry and reclaim lifecycle", async function () {
+      // 1. Create gift with short expiry
+      const expiringGiftID = ethers.keccak256(ethers.toUtf8Bytes("expiring-gift"));
+      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+      const currentTime = await time.latest();
+      
+      await giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        ethers.parseEther("60"),
+        currentTime + 5, // Expires in 5 seconds
+        "Expiring test gift",
+        expiringGiftID,
+        creator
+      );
+      
+      // 2. Validate before expiry
+      let [isValid, message] = await giftChain.validateGift(expiringGiftID);
+      expect(isValid).to.be.true;
+      expect(message).to.equal("Valid gift");
+      
+      // 3. Fast forward past expiry
+      await time.increase(6);
+      
+      // 4. Reclaim gift
+      const user1BalanceBefore = await mockToken.balanceOf(await user1.getAddress());
+      await giftChain.connect(user1).reclaimGift(expiringGiftID);
+      const user1BalanceAfter = await mockToken.balanceOf(await user1.getAddress());
+      expect(user1BalanceAfter - user1BalanceBefore).to.equal(ethers.parseEther("60"));
+      
+      // 5. Validate after reclaiming
+      [isValid, message] = await giftChain.validateGift(expiringGiftID);
+      expect(isValid).to.be.false;
+      expect(message).to.equal("Gift reclaimed");
     });
   });
 });

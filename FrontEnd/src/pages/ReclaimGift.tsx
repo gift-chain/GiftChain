@@ -458,7 +458,7 @@ const ReclaimGift: React.FC = () => {
           </div>
         )}
 
-        <div className="mt-6 text-xs text-indigo-300">
+        {/* <div className="mt-6 text-xs text-indigo-300">
           <p className="mb-1">Test codes:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>
@@ -480,7 +480,7 @@ const ReclaimGift: React.FC = () => {
               <code className="bg-indigo-900/50 px-1 rounded">NOTCREATOR123</code> - Not your gift
             </li>
           </ul>
-        </div>
+        </div> */}
       </div>
     </div>
   );
