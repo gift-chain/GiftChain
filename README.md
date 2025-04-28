@@ -77,8 +77,7 @@ GiftChain/
 │   ├── schema.graphql      # Subgraph schema
 │   ├── subgraph.yaml       # Subgraph configuration
 │   └── mappings/           # Mapping functions
-└── [README.md](http://_vscodecontentref_/0)               # Project documentation
-
+└── README.md               # project documentation
 
 
 ## Installation 
