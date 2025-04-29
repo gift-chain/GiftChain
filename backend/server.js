@@ -12,7 +12,7 @@ const { createGift } = require("./controllers/createGiftController.js");
 const app = express();
 
 mongoose.connect(process.env.MONGO_URI);
-const PORT = 4000;
+const PORT = 3000;
 
 
 app.use(cors());
