@@ -259,13 +259,13 @@ export default function CreateGiftCard() {
         setGift({ ...response.data.details, token: form.token });
         setForm({ token: 'USDT', amount: '', expiry: '', message: '' });
         // Auto-trigger download
-        const link = document.createElement('a');
-        link.href = `http://localhost:3000${response.data.details.downloadUrl}`;
-        link.download = `${response.data.details.giftID}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        // navigate('/dashboard');
+        // const link = document.createElement('a');
+        // link.href = `http://localhost:3000${response.data.details.downloadUrl}`;
+        // link.download = `${response.data.details.giftID}.png`;
+        // document.body.appendChild(link);
+        // link.click();
+        // document.body.removeChild(link);
+        router.push("/dashboard");
       } else {
         setError(response.data.error || 'Failed to create gift.');
       }

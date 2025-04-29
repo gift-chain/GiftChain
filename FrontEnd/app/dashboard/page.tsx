@@ -28,14 +28,19 @@ import Link from "next/link";
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from "../subgraph/useGiftQueries";
-import { ethers } from "ethers";
+import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
 import giftChainABI from "../abi/giftChainABI.json";
 
+// Minimal ERC-20 ABI for decimals()
+const erc20Abi = [
+  "function decimals() view returns (uint8)",
+];
+
 // Token map (Sepolia testnet addresses)
 const tokenMap: Record<string, string> = {
-  USDT: "0xf99F557Ed59F884F49D923643b1A48F834a90653",
+  USDT: "0xf99F557Ed59F884F49D923643b1A48F834a90653" ,
   USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
   DAI: "0xA0c61934a9bF661c0f41db06538e6674CDccFFf2",
 };
@@ -45,23 +50,43 @@ const reverseTokenMap: Record<string, string> = Object.fromEntries(
   Object.entries(tokenMap).map(([symbol, address]) => [address.toLowerCase(), symbol])
 );
 
-// Token decimals map
-const tokenDecimals: Record<string, number> = {
-  USDT: 6,
-  USDC: 6,
-  DAI: 6,
-};
-
-// Get token symbol (fallback to address if unknown)
-const getTokenSymbol = (tokenAddress: string): string => {
-  return reverseTokenMap[tokenAddress.toLowerCase()] || tokenAddress.slice(0, 8);
-};
-
 // Replace with your actual contract address
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE"; // e.g., "0x1234..."
+const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"; // e.g., "0x1234..."
 
 // Sepolia provider URL (replace with your Infura/Alchemy URL)
 const SEPOLIA_PROVIDER_URL = process.env.NEXT_PUBLIC_SEPOLIA_PROVIDER_URL || "https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX.sepolia.org";
+
+// Interfaces for computed data
+interface Stats {
+  totalCreated: number;
+  totalReceived: number;
+  totalGiftValue: string;
+  claimRate: string;
+}
+
+interface GiftCard {
+  id: string;
+  amount: string;
+  recipient: string;
+  message: string;
+  expiryDate: string;
+  status: string;
+  createdDate: string;
+  claimedDate: string | null;
+  theme: string;
+  sender?: string;
+  receivedDate?: string;
+}
+
+interface ChartData {
+  name: string;
+  total: number;
+}
+
+interface PieChartData {
+  name: string;
+  value: number;
+}
 
 export default function Dashboard() {
   const [isConnected, setIsConnected] = useState(false);
@@ -71,6 +96,19 @@ export default function Dashboard() {
   const [timeRange, setTimeRange] = useState("month");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [realTimeGifts, setRealTimeGifts] = useState<Gifts[]>([]);
+  const [tokenDecimalsCache, setTokenDecimalsCache] = useState<Record<string, number>>({});
+  const [stats, setStats] = useState<Stats>({
+    totalCreated: 0,
+    totalReceived: 0,
+    totalGiftValue: "0.00",
+    claimRate: "0",
+  });
+  const [createdGiftCards, setCreatedGiftCards] = useState<GiftCard[]>([]);
+  const [receivedGiftCards, setReceivedGiftCards] = useState<GiftCard[]>([]);
+  const [areaChartData, setAreaChartData] = useState<ChartData[]>([]);
+  const [barChartData, setBarChartData] = useState<ChartData[]>([]);
+  const [pieChartData, setPieChartData] = useState<PieChartData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get connected wallet address from wagmi
   const { address, isConnected: wagmiIsConnected } = useAccount();
@@ -90,6 +128,46 @@ export default function Dashboard() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Function to fetch token decimals on-chain
+  const fetchTokenDecimals = async (tokenAddress: string): Promise<number> => {
+    if (tokenDecimalsCache[tokenAddress.toLowerCase()]) {
+      return tokenDecimalsCache[tokenAddress.toLowerCase()];
+    }
+    try {
+      const provider = new ethers.JsonRpcProvider(SEPOLIA_PROVIDER_URL);
+      const tokenContract = new ethers.Contract(tokenAddress, erc20Abi, provider);
+      const decimals = await tokenContract.decimals();
+      const decimalsNumber = Number(decimals);
+      setTokenDecimalsCache((prev) => ({
+        ...prev,
+        [tokenAddress.toLowerCase()]: decimalsNumber,
+      }));
+      return decimalsNumber;
+    } catch (error) {
+      console.error(`Error fetching decimals for token ${tokenAddress}:`, error);
+      return 18; // Default to 18 decimals if fetch fails
+    }
+  };
+
+  // Function to get token decimals (cached or fetched)
+  const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
+    const knownDecimals: Record<string, number> = {
+      USDT: 6,
+      USDC: 6,
+      DAI: 18,
+    };
+    const tokenSymbol = reverseTokenMap[tokenAddress.toLowerCase()];
+    if (tokenSymbol && knownDecimals[tokenSymbol]) {
+      return knownDecimals[tokenSymbol];
+    }
+    return fetchTokenDecimals(tokenAddress);
+  };
+
+  // Get token symbol (fallback to address if unknown)
+  const getTokenSymbol = (tokenAddress: string): string => {
+    return reverseTokenMap[tokenAddress.toLowerCase()] || tokenAddress.slice(0, 8);
+  };
 
   // Subgraph queries
   const hashedAddress = userAddress ? ethers.keccak256(ethers.getAddress(userAddress)) : "";
@@ -138,7 +216,6 @@ export default function Dashboard() {
               expiry: expiry.toString(),
               timeCreated: timeCreated.toString(),
               status: status as "PENDING" | "CLAIMED" | "RECLAIMED",
-              // Omit claimed and reclaimed (implicitly undefined)
             };
 
             setRealTimeGifts((prev) => {
@@ -147,7 +224,7 @@ export default function Dashboard() {
             });
 
             axios
-              .get(`http://localhost:4000/api/gift/${giftID.toLowerCase()}`)
+              .get(`http://localhost:3000/api/gift/${giftID.toLowerCase()}`)
               .then((response) => {
                 setGiftIDs((prev) => ({
                   ...prev,
@@ -215,153 +292,178 @@ export default function Dashboard() {
     }
   }, [allGifts, claimedGifts, reclaimedGifts]);
 
-  // Compute stats for Overview Cards
-  const stats = useMemo(() => {
-    let totalGiftValue = 0;
-    let claimedCount = 0;
-    let totalCreated = allGifts.length;
-    let totalReceived = claimedGifts.length;
-    let claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
+  // Compute stats, gift cards, and chart data
+  useEffect(() => {
+    const computeData = async () => {
+      setIsLoading(true);
+      try {
+        // Compute stats for Overview Cards
+        let totalGiftValue = 0;
+        let claimedCount = 0;
+        let totalCreated = allGifts.length;
+        let totalReceived = claimedGifts.length;
+        let claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
 
-    allGifts.forEach((gift) => {
-      const tokenSymbol = getTokenSymbol(gift.token);
-      const decimals = tokenDecimals[tokenSymbol] || 6;
-      const amount = parseFloat(ethers.formatUnits(gift.amount, decimals));
-      totalGiftValue += amount;
-    });
+        for (const gift of allGifts) {
+          console.log(`Raw gift.amount for gift ${gift.id}:`, gift.amount);
+          const decimals = await getTokenDecimals(gift.token);
+          const amount = parseFloat(formatUnits(gift.amount, decimals));
+          totalGiftValue += amount;
+        }
+        claimedCount = claimedGifts.length;
+        claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
 
-    claimedCount = claimedGifts.length;
-    claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
+        setStats({
+          totalCreated,
+          totalReceived,
+          totalGiftValue: totalGiftValue.toFixed(2),
+          claimRate: claimRate.toFixed(0),
+        });
 
-    return {
-      totalCreated,
-      totalReceived,
-      totalGiftValue: totalGiftValue.toFixed(2),
-      claimRate: claimRate.toFixed(0),
-    };
-  }, [allGifts, claimedGifts]);
+        // Compute created gift cards
+        const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
+        const newCreatedGiftCards: GiftCard[] = [];
+        for (const gift of allGifts) {
+          const tokenSymbol = getTokenSymbol(gift.token);
+          const decimals = await getTokenDecimals(gift.token);
+          const expiryDate = new Date(parseInt(gift.expiry) * 1000);
+          const isExpired = expiryDate < new Date();
+          const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
+          const formattedAmount = parseFloat(formatUnits(gift.amount, decimals)).toFixed(2);
 
-  // Chart data
-  const areaChartData = useMemo(() => {
-    const monthlyData: { [key: string]: number } = {};
-    allGifts.forEach((gift) => {
-      const date = new Date(parseInt(gift.timeCreated) * 1000);
-      const month = date.toLocaleString("default", { month: "short" });
-      const tokenSymbol = getTokenSymbol(gift.token);
-      const decimals = tokenDecimals[tokenSymbol] || 6;
-      const amount = parseFloat(ethers.formatUnits(gift.amount, decimals));
-      monthlyData[month] = (monthlyData[month] || 0) + amount;
-    });
+          newCreatedGiftCards.push({
+            id: giftIDs[gift.id.toLowerCase()] || gift.id,
+            amount: `${formattedAmount} ${tokenSymbol}`,
+            recipient: gift.claimed?.recipient || "N/A",
+            message: gift.message || "No message",
+            expiryDate: expiryDate.toISOString().split("T")[0],
+            status: isReclaimed ? "reclaimed" : isExpired ? "expired" : gift.status.toLowerCase(),
+            createdDate: new Date(parseInt(gift.timeCreated) * 1000).toISOString().split("T")[0],
+            claimedDate: gift.claimed
+              ? new Date(parseInt(gift.claimed.blockTimestamp) * 1000).toISOString().split("T")[0]
+              : null,
+            theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
+          });
+        }
+        setCreatedGiftCards(newCreatedGiftCards);
 
-    return [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ].map((month) => ({
-      name: month,
-      total: monthlyData[month] || 0,
-    }));
-  }, [allGifts]);
+        // Compute received gift cards
+        const newReceivedGiftCards: GiftCard[] = [];
+        for (const claimed of claimedGifts) {
+          console.log(`Raw claimed.amount for gift ${claimed.gift.id}:`, claimed.amount);
+          const tokenSymbol = getTokenSymbol(claimed.gift.token);
+          const decimals = await getTokenDecimals(claimed.gift.token);
+          const expiryDate = new Date(parseInt(claimed.gift.expiry) * 1000);
+          const formattedAmount = parseFloat(formatUnits(claimed.amount, decimals)).toFixed(2);
 
-  const barChartData = useMemo(() => {
-    const tokenCounts: { [key: string]: number } = {};
-    allGifts.forEach((gift) => {
-      const tokenSymbol = getTokenSymbol(gift.token);
-      tokenCounts[tokenSymbol] = (tokenCounts[tokenSymbol] || 0) + 1;
-    });
+          newReceivedGiftCards.push({
+            id: giftIDs[claimed.gift.id.toLowerCase()] || claimed.gift.id,
+            amount: `${formattedAmount} ${tokenSymbol}`,
+            recipient: userAddress, // Add recipient (user is the recipient of claimed gift)
+            sender: "N/A",
+            message: claimed.gift.message || "No message",
+            expiryDate: expiryDate.toISOString().split("T")[0],
+            status: claimed.gift.status.toLowerCase(),
+            createdDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0], // Add createdDate
+            receivedDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0],
+            claimedDate: new Date(parseInt(claimed.blockTimestamp) * 1000).toISOString().split("T")[0],
+            theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
+          });
+        }
+        setReceivedGiftCards(newReceivedGiftCards);
 
-    return Object.entries(tokenCounts).map(([name, total]) => ({
-      name,
-      total,
-    }));
-  }, [allGifts]);
+        // Compute area chart data
+        const monthlyData: { [key: string]: number } = {};
+        for (const gift of allGifts) {
+          const date = new Date(parseInt(gift.timeCreated) * 1000);
+          const month = date.toLocaleString("default", { month: "short" });
+          const decimals = await getTokenDecimals(gift.token);
+          const amount = parseFloat(formatUnits(gift.amount, decimals));
+          monthlyData[month] = (monthlyData[month] || 0) + amount;
+        }
+        const newAreaChartData = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ].map((month) => ({
+          name: month,
+          total: monthlyData[month] || 0,
+        }));
+        setAreaChartData(newAreaChartData);
 
-  const pieChartData = useMemo(() => {
-    const statusCounts = {
-      Claimed: 0,
-      Pending: 0,
-      Expired: 0,
-      Reclaimed: 0,
-    };
+        // Compute bar chart data
+        const tokenCounts: { [key: string]: number } = {};
+        allGifts.forEach((gift) => {
+          const tokenSymbol = getTokenSymbol(gift.token);
+          tokenCounts[tokenSymbol] = (tokenCounts[tokenSymbol] || 0) + 1;
+        });
+        const newBarChartData = Object.entries(tokenCounts).map(([name, total]) => ({
+          name,
+          total,
+        }));
+        setBarChartData(newBarChartData);
 
-    allGifts.forEach((gift) => {
-      const expiryDate = new Date(parseInt(gift.expiry) * 1000);
-      const isExpired = expiryDate < new Date();
-      if (gift.status === "CLAIMED") {
-        statusCounts.Claimed += 1;
-      } else if (gift.status === "RECLAIMED") {
-        statusCounts.Reclaimed += 1;
-      } else if (isExpired) {
-        statusCounts.Expired += 1;
-      } else {
-        statusCounts.Pending += 1;
+        // Compute pie chart data
+        const statusCounts = {
+          Claimed: 0,
+          Pending: 0,
+          Expired: 0,
+          Reclaimed: 0,
+        };
+        allGifts.forEach((gift) => {
+          const expiryDate = new Date(parseInt(gift.expiry) * 1000);
+          const isExpired = expiryDate < new Date();
+          if (gift.status === "CLAIMED") {
+            statusCounts.Claimed += 1;
+          } else if (gift.status === "RECLAIMED") {
+            statusCounts.Reclaimed += 1;
+          } else if (isExpired) {
+            statusCounts.Expired += 1;
+          } else {
+            statusCounts.Pending += 1;
+          }
+        });
+        const newPieChartData = Object.entries(statusCounts)
+          .filter(([_, value]) => value > 0)
+          .map(([name, value]) => ({
+            name,
+            value,
+          }));
+        setPieChartData(newPieChartData);
+      } catch (error) {
+        console.error("Error computing dashboard data:", error);
+        setStats({
+          totalCreated: 0,
+          totalReceived: 0,
+          totalGiftValue: "0.00",
+          claimRate: "0",
+        });
+        setCreatedGiftCards([]);
+        setReceivedGiftCards([]);
+        setAreaChartData(
+          ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((month) => ({
+            name: month,
+            total: 0,
+          }))
+        );
+        setBarChartData([]);
+        setPieChartData([]);
+      } finally {
+        setIsLoading(false);
       }
-    });
+    };
 
-    return Object.entries(statusCounts)
-      .filter(([_, value]) => value > 0)
-      .map(([name, value]) => ({
-        name,
-        value,
-      }));
-  }, [allGifts]);
-
-  // Format gift card data for Tabs
-  const createdGiftCards = useMemo(() => {
-    const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
-    return allGifts.map((gift) => {
-      const tokenSymbol = getTokenSymbol(gift.token);
-      const decimals = tokenDecimals[tokenSymbol] || 6;
-      const expiryDate = new Date(parseInt(gift.expiry) * 1000);
-      const isExpired = expiryDate < new Date();
-      const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
-      const formattedAmount = parseFloat(ethers.formatUnits(gift.amount, decimals)).toFixed(2);
-
-      return {
-        id: giftIDs[gift.id.toLowerCase()] || gift.id,
-        amount: `${formattedAmount} ${tokenSymbol}`,
-        recipient: gift.claimed?.recipient || "N/A",
-        message: gift.message || "No message",
-        expiryDate: expiryDate.toISOString().split("T")[0],
-        status: isReclaimed ? "reclaimed" : isExpired ? "expired" : gift.status.toLowerCase(),
-        createdDate: new Date(parseInt(gift.timeCreated) * 1000).toISOString().split("T")[0],
-        claimedDate: gift.claimed
-          ? new Date(parseInt(gift.claimed.blockTimestamp) * 1000).toISOString().split("T")[0]
-          : null,
-        theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
-      };
-    });
-  }, [allGifts, reclaimedGifts, giftIDs]);
-
-  const receivedGiftCards = useMemo(() => {
-    return claimedGifts.map((claimed) => {
-      const tokenSymbol = getTokenSymbol(claimed.gift.token);
-      const decimals = tokenDecimals[tokenSymbol] || 6;
-      const expiryDate = new Date(parseInt(claimed.gift.expiry) * 1000);
-      const formattedAmount = parseFloat(ethers.formatUnits(claimed.amount, decimals)).toFixed(2);
-
-      return {
-        id: giftIDs[claimed.gift.id.toLowerCase()] || claimed.gift.id,
-        amount: `${formattedAmount} ${tokenSymbol}`,
-        sender: "N/A",
-        message: claimed.gift.message || "No message",
-        expiryDate: expiryDate.toISOString().split("T")[0],
-        status: claimed.gift.status.toLowerCase(),
-        receivedDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0],
-        claimedDate: new Date(parseInt(claimed.blockTimestamp) * 1000).toISOString().split("T")[0],
-        theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
-      };
-    });
-  }, [claimedGifts, giftIDs]);
+    computeData();
+  }, [allGifts, claimedGifts, reclaimedGifts, giftIDs]);
 
   if (!mounted) return null;
 
@@ -398,7 +500,7 @@ export default function Dashboard() {
     );
   }
 
-  if (giftsLoading || claimedLoading || reclaimedLoading) {
+  if (giftsLoading || claimedLoading || reclaimedLoading || isLoading) {
     return (
       <div className="container flex items-center justify-center min-h-screen hexagon-bg text-foreground">
         Loading...
@@ -429,7 +531,6 @@ export default function Dashboard() {
             <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> Connected: {userAddress.slice(0, 6)}...
             {userAddress.slice(-4)}
           </Badge>
-          
         </div>
         <div className="flex gap-2">
           <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 glow-border">
@@ -788,7 +889,7 @@ export default function Dashboard() {
                         value={
                           ((new Date(card.expiryDate).getTime() - new Date().getTime()) /
                             (new Date(card.expiryDate).getTime() -
-                              new Date(card.receivedDate).getTime())) *
+                            new Date(card.receivedDate || card.createdDate).getTime())) *
                           100
                         }
                         className="h-2 bg-muted"
