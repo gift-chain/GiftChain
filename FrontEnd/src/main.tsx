@@ -14,6 +14,7 @@ import ReclaimGift from './pages/ReclaimGift.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import CreateGiftCard from './pages/CreateGiftCard.tsx';
 import { Gift } from 'lucide-react';
+import ClaimGiftPages from './pages/ClaimGiftPages.tsx';
 
 
 const RouterLayout = () => {
@@ -59,6 +60,10 @@ const router = createBrowserRouter([
       {
         path: "/reclaimGift",
         element: <ReclaimGift />
+      },
+      {
+        path: "/claimGiftPages",
+        element: <ClaimGiftPages />
       },
     ],
   },
