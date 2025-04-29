@@ -12,7 +12,17 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CheckCircle2, XCircle, Wallet } from "lucide-react";
+import { 
+  ArrowLeft, 
+  CheckCircle2, 
+  XCircle, 
+  Wallet, 
+  Copy, 
+  ExternalLink, 
+  Clock,
+  Info,
+  Gift
+} from "lucide-react";
 import { ethers } from "ethers";
 import GiftChainABI from "../../app/abi/GiftChain.json";
 import erc20ABI from "../../app/abi/erc20ABI.json";
@@ -54,6 +64,7 @@ export default function ReclaimGift() {
   const [txSuccess, setTxSuccess] = useState<boolean>(false);
   const [txHash, setTxHash] = useState<string>("");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [showInfoTooltip, setShowInfoTooltip] = useState<boolean>(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -216,6 +227,19 @@ export default function ReclaimGift() {
         return "Reclaimed";
       default:
         return "Unknown";
+    }
+  };
+
+  const getStatusColor = (status: GiftStatus): string => {
+    switch (status) {
+      case GiftStatus.PENDING:
+        return "bg-blue-500";
+      case GiftStatus.SUCCESSFUL:
+        return "bg-green-500";
+      case GiftStatus.RECLAIMED:
+        return "bg-purple-500";
+      default:
+        return "bg-gray-500";
     }
   };
 
@@ -397,6 +421,14 @@ export default function ReclaimGift() {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Text copied to clipboard",
+    });
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setGiftDetails(null);
@@ -406,82 +438,147 @@ export default function ReclaimGift() {
   };
 
   return (
-    <div className="container py-8 max-w-md hexagon-bg">
-      <Button
-        variant="ghost"
-        className="mb-6 gap-2"
-        onClick={() => router.push("/")}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Home
-      </Button>
-
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight mb-2 gradient-text">
-          Reclaim Expired Gift
-        </h1>
-        <p className="text-muted-foreground">
-          Enter your gift code to reclaim expired, unclaimed tokens.
-        </p>
-      </div>
-
-      {/* Wallet Connection Status */}
-      <div className="mb-6">
-        {walletAddress ? (
-          <p className="text-center text-sm text-muted-foreground">
-            Wallet connected: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
-          </p>
-        ) : (
-          <Button
-            size="lg"
-            className="w-full gap-2 glow-border"
-            onClick={connectWallet}
-          >
-            <Wallet className="h-5 w-5" />
-            Connect Wallet
-          </Button>
-        )}
-      </div>
-
-      {/* Form to Input Gift Code */}
-      <div className="mb-6">
-        <div className="glass p-4 rounded-lg border border-primary/30">
-          <label className="block text-sm text-muted-foreground mb-2">
-            Gift Code
-          </label>
-          <input
-            type="text"
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              setGiftDetails(null);
-              setTxSuccess(false);
-              setTxHash("");
-              setErrors({ code: undefined });
-            }}
-            className="w-full bg-primary/10 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-primary/30"
-            placeholder="Enter gift code (e.g., c2f1-eb68-edd1-89ba)"
-          />
-          <Button
-            size="lg"
-            className="mt-4 w-full gap-2 glow-border"
-            onClick={handleCodeValidation}
-            disabled={loading || !code.trim() || code.length < 6}
-          >
-            {loading ? (
-              <>Validating...</>
-            ) : (
-              <>
-                <CheckCircle2 className="h-5 w-5" />
-                Validate Gift Card
-              </>
-            )}
-          </Button>
+    <div className="container px-4 py-8 max-w-md mx-auto hexagon-bg min-h-screen flex flex-col">
+      {/* Top navigation */}
+      <nav className="mb-6 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          className="gap-2 hover:bg-primary/10 transition-all"
+          onClick={() => router.push("/")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Back to Home</span>
+        </Button>
+        
+        <div className="text-xs text-muted-foreground bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+          Sepolia Testnet
         </div>
-        {errors.code && !isModalOpen && (
-          <p className="text-red-400 mt-2 text-sm text-center">{errors.code}</p>
-        )}
+      </nav>
+
+      {/* Header with animated gradient */}
+      <div className="mb-8 text-center relative">
+        <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 w-64 h-64 bg-gradient-to-br from-purple-600/30 to-blue-500/20 blur-3xl rounded-full opacity-50"></div>
+        <div className="relative z-10">
+          <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center border border-primary/30 shadow-lg shadow-primary/5">
+            <Gift className="h-8 w-8 text-purple-400" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight mb-3 gradient-text">
+            Reclaim Expired Gift
+          </h1>
+          <p className="text-muted-foreground max-w-xs mx-auto">
+            Enter your gift code to reclaim expired, unclaimed tokens that you previously created.
+          </p>
+        </div>
       </div>
+
+      {/* Main card with glowing border effect */}
+      <Card className="bg-black/40 backdrop-blur-xl border border-primary/20 shadow-xl shadow-purple-900/5 overflow-hidden relative mb-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-blue-500/5 opacity-50"></div>
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-primary/5 to-transparent gift-shimmer"></div>
+        
+        <CardContent className="p-6 relative">
+          {/* Info button with tooltip */}
+          <div className="absolute top-4 right-4">
+            <button 
+              className="text-muted-foreground hover:text-white transition-colors"
+              onClick={() => setShowInfoTooltip(!showInfoTooltip)}
+            >
+              <Info className="h-5 w-5" />
+            </button>
+            
+            {showInfoTooltip && (
+              <div className="absolute right-0 top-6 w-64 p-3 bg-black/80 backdrop-blur-md rounded-md border border-primary/30 text-xs z-50 shadow-xl">
+                <p className="mb-2">You can reclaim tokens from expired gift cards that:</p>
+                <ul className="space-y-1 list-disc pl-4">
+                  <li>You created originally</li>
+                  <li>Have passed their expiration date</li>
+                  <li>Haven't been redeemed by recipients</li>
+                </ul>
+                <button 
+                  className="mt-2 text-purple-400 hover:text-purple-300 text-xs"
+                  onClick={() => setShowInfoTooltip(false)}
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Wallet Connection Status */}
+          <div className="mb-6">
+            {walletAddress ? (
+              <div className="flex items-center justify-center gap-2 bg-primary/10 p-2 rounded-lg border border-primary/20">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-green-400">Connected:</span> {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
+                </p>
+                <button 
+                  className="ml-1 text-muted-foreground hover:text-white transition-colors"
+                  onClick={() => copyToClipboard(walletAddress)}
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                size="lg"
+                className="w-full gap-2 glow-border bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
+                onClick={connectWallet}
+              >
+                <Wallet className="h-5 w-5" />
+                Connect Wallet
+              </Button>
+            )}
+          </div>
+
+          {/* Form to Input Gift Code */}
+          <div className="space-y-4">
+            <div className="glass p-4 rounded-lg border border-primary/30">
+              <label className="block text-sm text-muted-foreground mb-2 font-medium">
+                Gift Code
+              </label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setGiftDetails(null);
+                  setTxSuccess(false);
+                  setTxHash("");
+                  setErrors({ code: undefined });
+                }}
+                className="w-full bg-primary/10 text-white rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-primary/30 transition-all placeholder:text-gray-500"
+                placeholder="Enter gift code (e.g., c2f1-eb68-edd1-89ba)"
+              />
+            </div>
+            {errors.code && !isModalOpen && (
+              <div className="text-red-400 p-2 bg-red-400/10 border border-red-400/20 rounded-md text-sm flex items-center gap-2">
+                <XCircle className="h-4 w-4 flex-shrink-0" />
+                <p>{errors.code}</p>
+              </div>
+            )}
+            
+            <Button
+              size="lg"
+              className="mt-2 w-full gap-2 glow-border bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
+              onClick={handleCodeValidation}
+              disabled={loading || !code.trim() || code.length < 6}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  <span>Validating...</span>
+                </div>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-5 w-5" />
+                  Validate Gift Card
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Loading State */}
       {loading && (
@@ -490,10 +587,22 @@ export default function ReclaimGift() {
         </div>
       )}
 
+      {/* Help text section */}
+      <div className="mt-auto pt-6">
+        <div className="text-center text-sm text-muted-foreground bg-primary/5 p-4 rounded-lg border border-primary/10">
+          <p className="mb-2">Need help with your gift code?</p>
+          <div className="flex justify-center gap-4">
+            <button className="text-purple-400 hover:text-purple-300 transition-colors">FAQs</button>
+            <span className="text-primary/30">|</span>
+            <button className="text-purple-400 hover:text-purple-300 transition-colors">Support</button>
+          </div>
+        </div>
+      </div>
+
       {/* Modal for Gift Details and Reclamation */}
       {giftDetails && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="glass border border-primary/30">
+          <DialogContent className="glass border border-primary/30 max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="gradient-text flex items-center gap-2">
                 {giftDetails.isValid ? (
@@ -515,151 +624,178 @@ export default function ReclaimGift() {
 
             {/* Gift Card Details */}
             {giftDetails.isValid && (
-              <div className="mt-4 space-y-4">
+              <div className="mt-4 space-y-6">
                 {/* Visual Card Display */}
-                <Card className="overflow-hidden border-0 crypto-card glow-card">
-                  <CardContent className="p-0">
-                    <div className="relative">
-                      <div className="absolute inset-0 gift-card-bg gift-card-pattern"></div>
-                      <img
-                        src="/placeholder.svg?height=300&width=500"
-                        alt="Gift card"
-                        className="w-full h-auto relative z-10 opacity-80"
-                      />
-                      <div className="absolute inset-0 flex flex-col justify-center items-center text-white p-6 z-20">
-                        <div className="text-center">
-                          <div className="text-4xl font-bold mb-2 glow-text">
-                            {giftDetails.amount} {giftDetails.token}
-                          </div>
-                          {giftDetails.message && (
-                            <p className="italic">"{giftDetails.message}"</p>
-                          )}
+                <Card className="overflow-hidden border-0 crypto-card relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 via-blue-500/20 to-purple-600/20 opacity-50 gift-shimmer"></div>
+                  <div className="absolute inset-0 border-2 border-primary/30 rounded-lg"></div>
+                  
+                  <CardContent className="p-6 relative">
+                    <div className="absolute top-4 right-4 text-xs px-2 py-1 rounded-full bg-black/50 border border-primary/30 flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(giftDetails.status)}`}></div>
+                      <span>{getStatusText(giftDetails.status)}</span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center justify-center h-full text-center space-y-2">
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Gift Card</div>
+                      <div className="text-4xl font-bold mb-2 gradient-text">
+                        {giftDetails.amount} <span className="text-2xl">{giftDetails.token}</span>
+                      </div>
+                      
+                      {giftDetails.message && (
+                        <div className="bg-black/30 backdrop-blur-sm p-3 rounded-lg border border-primary/20 max-w-xs">
+                          <p className="italic text-sm">"{giftDetails.message}"</p>
                         </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3">
+                        <Clock className="h-3 w-3" />
+                        <span>
+                          {giftDetails.expiry * 1000 > Date.now() ? "Expires" : "Expired"}: {formatDate(giftDetails.expiry)}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Detailed Information */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Amount:</span>
-                    <span className="text-sm font-medium">
-                      {giftDetails.amount} {giftDetails.token}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Message:</span>
-                    <span className="text-sm font-medium italic">
-                      "{giftDetails.message}"
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Token Address:</span>
-                    <span className="font-mono text-sm address-tag">
-                      {giftDetails.tokenAddress.substring(0, 6)}...
-                      {giftDetails.tokenAddress.substring(giftDetails.tokenAddress.length - 4)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">From:</span>
-                    <span className="font-mono text-sm address-tag">
-                      {giftDetails.creator.substring(0, 6)}...
-                      {giftDetails.creator.substring(giftDetails.creator.length - 4)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Status:</span>
-                    <span
-                      className={`text-sm font-medium flex items-center gap-1 ${
-                        giftDetails.status === GiftStatus.SUCCESSFUL
-                          ? "text-green-400"
-                          : giftDetails.status === GiftStatus.RECLAIMED
-                          ? "text-purple-400"
-                          : giftDetails.status === GiftStatus.PENDING
-                          ? "text-blue-400"
-                          : "text-gray-400"
-                      }`}
-                    >
+                <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Details</div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Amount:</span>
+                      <span className="text-sm font-medium">
+                        {giftDetails.amount} {giftDetails.token}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Token Address:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-xs bg-primary/10 px-2 py-1 rounded-md border border-primary/20">
+                          {giftDetails.tokenAddress.substring(0, 6)}...
+                          {giftDetails.tokenAddress.substring(giftDetails.tokenAddress.length - 4)}
+                        </span>
+                        <button 
+                          className="text-muted-foreground hover:text-white transition-colors"
+                          onClick={() => copyToClipboard(giftDetails.tokenAddress)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">From:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-xs bg-primary/10 px-2 py-1 rounded-md border border-primary/20">
+                          {giftDetails.creator.substring(0, 6)}...
+                          {giftDetails.creator.substring(giftDetails.creator.length - 4)}
+                        </span>
+                        <button 
+                          className="text-muted-foreground hover:text-white transition-colors"
+                          onClick={() => copyToClipboard(giftDetails.creator)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Created:</span>
+                      <span className="text-sm">{formatDate(giftDetails.timeCreated)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        {giftDetails.expiry * 1000 > Date.now() ? "Expires" : "Expired"}:
+                      </span>
                       <span
-                        className={`w-2 h-2 rounded-full ${
-                          giftDetails.status === GiftStatus.SUCCESSFUL
-                            ? "bg-green-500"
-                            : giftDetails.status === GiftStatus.RECLAIMED
-                            ? "bg-purple-500"
-                            : giftDetails.status === GiftStatus.PENDING
-                            ? "bg-blue-500"
-                            : "bg-gray-500"
+                        className={`text-sm ${
+                          giftDetails.expiry * 1000 > Date.now() ? "text-white" : "text-red-400"
                         }`}
-                      ></span>
-                      {getStatusText(giftDetails.status)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Created:</span>
-                    <span className="text-sm">{formatDate(giftDetails.timeCreated)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {giftDetails.expiry * 1000 > Date.now() ? "Expires" : "Expired"}:
-                    </span>
-                    <span
-                      className={`text-sm ${
-                        giftDetails.expiry * 1000 > Date.now() ? "text-white" : "text-red-400"
-                      }`}
-                    >
-                      {formatDate(giftDetails.expiry)}
-                    </span>
+                      >
+                        {formatDate(giftDetails.expiry)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Transaction Hash (if available) */}
                 {txHash && (
-                  <div className="text-center text-sm text-muted-foreground">
-                    <p>
-                      Transaction Hash:{" "}
+                  <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
+                    <span className="text-sm text-muted-foreground">Transaction:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs">
+                        {txHash.slice(0, 6)}...{txHash.slice(-4)}
+                      </span>
                       <a
                         href={`https://sepolia.etherscan.io/tx/${txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline text-purple-400 hover:text-purple-300"
+                        className="text-purple-400 hover:text-purple-300 transition-colors"
                       >
-                        {txHash.slice(0, 6)}...{txHash.slice(-4)}
+                        <ExternalLink className="h-3 w-3" />
                       </a>
-                    </p>
+                      <button 
+                        className="text-muted-foreground hover:text-white transition-colors"
+                        onClick={() => copyToClipboard(txHash)}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {/* Reclaim Button or Success/Error Message */}
                 {txSuccess ? (
-                  <div className="text-center text-green-400 text-sm flex items-center justify-center gap-1">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Successfully reclaimed!
+                  <div className="text-center p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center justify-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-400" />
+                    <span className="text-green-400 font-medium">Successfully reclaimed!</span>
                   </div>
                 ) : giftDetails.isValid && isReclaimable(giftDetails) ? (
                   <Button
                     onClick={handleReclaimGift}
                     disabled={isSubmitting}
-                    className="w-full bg-purple-600 hover:bg-purple-700 glow-border"
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all duration-300 py-6 text-lg font-medium glow-border"
                   >
-                    {isSubmitting ? "Reclaiming..." : "Reclaim Tokens"}
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                        <span>Reclaiming...</span>
+                      </div>
+                    ) : (
+                      "Reclaim Tokens"
+                    )}
                   </Button>
                 ) : (
-                  <div className="text-center text-sm text-red-400">
-                    {giftDetails.errorMessage ||
-                      "This gift cannot be reclaimed (not expired, not your gift, or already processed)."}
+                  <div className="text-center p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2">
+                    <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+                    <span className="text-red-400 text-sm">
+                      {giftDetails.errorMessage ||
+                        "This gift cannot be reclaimed (not expired, not your gift, or already processed)."}
+                    </span>
                   </div>
                 )}
               </div>
             )}
 
-            <Button
-              variant="ghost"
-              className="mt-4 w-full gap-2"
-              onClick={handleCloseModal}
-            >
-              {giftDetails.isValid && !txSuccess ? "Validate Another Code" : "Try Another Code"}
-            </Button>
+            <div className="mt-6 pt-4 border-t border-primary/20 flex flex-col gap-3">
+              <Button
+                variant="outline"
+                className="w-full gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10"
+                onClick={handleCloseModal}
+              >
+                {giftDetails.isValid && !txSuccess ? "Validate Another Code" : "Try Another Code"}
+              </Button>
+              
+              {giftDetails.isValid && giftDetails.status === GiftStatus.PENDING && giftDetails.expiry * 1000 > Date.now() && (
+                <div className="text-center text-xs text-muted-foreground p-2">
+                  This gift is still valid and can be redeemed until {formatDate(giftDetails.expiry)}
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       )}

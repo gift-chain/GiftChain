@@ -29,13 +29,14 @@ interface ValidationResult {
   message?: string;
   details?: {
     token: string;
+    tokenAddress: string; // Add token address
     message: string;
     amount: string;
     expiry: string;
     timeCreated: string;
     claimed: boolean;
     sender: string;
-    status: string; // Add status field to display raw status (e.g., "ACTIVE")
+    status: string;
   };
 }
 
@@ -82,7 +83,7 @@ export default function ValidateGiftCard() {
         };
       }
 
-      const block = await provider.getBlock("latest") ;
+      const block = await provider.getBlock("latest");
       const currentTimestamp = block.timestamp;
       if (currentTimestamp > gift.expiry) {
         return {
@@ -109,13 +110,14 @@ export default function ValidateGiftCard() {
 
       const details = {
         token: tokenSymbol,
+        tokenAddress: gift.token, // Add token address
         message: gift.message,
         amount: formattedAmount,
         expiry: gift.expiry.toString(),
         timeCreated: gift.timeCreated.toString(),
         claimed: gift.claimed,
         sender: gift.creator,
-        status: status, // Add raw status
+        status: status,
       };
 
       return {
@@ -151,6 +153,16 @@ export default function ValidateGiftCard() {
         message: errorMessage,
       };
     }
+  };
+
+  const formatDate = (timestamp: string): string => {
+    return new Date(parseInt(timestamp) * 1000).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const handleCodeValidation = async () => {
@@ -210,28 +222,31 @@ export default function ValidateGiftCard() {
   };
 
   return (
-    <div className="container py-8 max-w-md hexagon-bg">
+    <div className="container py-4 sm:py-8 max-w-md hexagon-bg mx-auto">
+      {/* Back Button */}
       <Button
         variant="ghost"
-        className="mb-6 gap-2"
+        className="mb-4 sm:mb-6 gap-2"
         onClick={() => router.push("/")}
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Home
       </Button>
 
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight mb-2 gradient-text">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 gradient-text">
           Validate Gift Card
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm sm:text-base">
           Enter the gift code to check its details.
         </p>
       </div>
 
-      <div className="mb-6">
+      {/* Form */}
+      <div className="mb-6 px-4 sm:px-0">
         <div className="glass p-4 rounded-lg border border-primary/30">
-          <label className="block text-sm text-muted-foreground mb-2">
+          <label className="block text-xs sm:text-sm text-muted-foreground mb-2">
             Gift Code
           </label>
           <input
@@ -242,12 +257,12 @@ export default function ValidateGiftCard() {
               setValidationResult(null);
               setErrors({ code: undefined });
             }}
-            className="w-full bg-primary/10 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-primary/30"
+            className="w-full bg-primary/10 text-white rounded-lg py-2 px-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-purple-500 border border-primary/30"
             placeholder="Enter gift code (e.g., c2f1-eb68-edd1-89ba)"
           />
           <Button
             size="lg"
-            className="mt-4 w-full gap-2 glow-border"
+            className="mt-4 w-full gap-2 glow-border text-sm sm:text-base"
             onClick={handleCodeValidation}
             disabled={loading || !code.trim() || code.length < 6}
           >
@@ -255,41 +270,43 @@ export default function ValidateGiftCard() {
               <>Validating...</>
             ) : (
               <>
-                <CheckCircle2 className="h-5 w-5" />
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                 Validate Gift Card
               </>
             )}
           </Button>
         </div>
         {errors.code && !isModalOpen && (
-          <p className="text-red-400 mt-2 text-sm text-center">{errors.code}</p>
+          <p className="text-red-400 mt-2 text-xs sm:text-sm text-center">{errors.code}</p>
         )}
       </div>
 
+      {/* Loading State */}
       {loading && (
-        <div className="text-center animate-pulse space-y-4">
-          <div className="h-64 bg-primary/10 rounded"></div>
+        <div className="text-center animate-pulse space-y-4 px-4 sm:px-0">
+          <div className="h-48 sm:h-64 bg-primary/10 rounded"></div>
         </div>
       )}
 
+      {/* Modal for Gift Card Details */}
       {validationResult && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="glass border border-primary/30">
+          <DialogContent className="glass border border-primary/30 max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="gradient-text flex items-center gap-2">
+              <DialogTitle className="gradient-text flex items-center gap-2 text-lg sm:text-xl">
                 {validationResult.isValid ? (
                   <>
-                    <CheckCircle2 className="h-5 w-5 text-green-400" />
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
                     Gift Card Details
                   </>
                 ) : (
                   <>
-                    <XCircle className="h-5 w-5 text-red-400" />
+                    <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
                     Validation Error
                   </>
                 )}
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
+              <DialogDescription className="text-muted-foreground text-xs sm:text-sm">
                 {validationResult.message}
               </DialogDescription>
             </DialogHeader>
@@ -299,21 +316,30 @@ export default function ValidateGiftCard() {
                 {/* Visual Card Display */}
                 <Card className="overflow-hidden border-0 crypto-card glow-card">
                   <CardContent className="p-0">
-                    <div className="relative">
+                    <div className="relative aspect-[5/3] w-full">
                       <div className="absolute inset-0 gift-card-bg gift-card-pattern"></div>
                       <img
                         src="/placeholder.svg?height=300&width=500"
                         alt="Gift card"
-                        className="w-full h-auto relative z-10 opacity-80"
+                        className="w-full h-full object-cover relative z-10 opacity-80"
                       />
-                      <div className="absolute inset-0 flex flex-col justify-center items-center text-white p-6 z-20">
+                      <div className="absolute inset-0 flex flex-col justify-between text-white p-4 sm:p-6 z-20">
                         <div className="text-center">
-                          <div className="text-4xl font-bold mb-2 glow-text">
+                          <div className="text-2xl sm:text-4xl font-bold mb-1 sm:mb-2 glow-text">
                             {validationResult.details.amount} {validationResult.details.token}
                           </div>
                           {validationResult.details.message && (
-                            <p className="italic">"{validationResult.details.message}"</p>
+                            <p className="italic text-xs sm:text-sm">"{validationResult.details.message}"</p>
                           )}
+                        </div>
+                        <div className="text-xs sm:text-sm space-y-1">
+                          <p>
+                            From: {validationResult.details.sender.substring(0, 6)}...
+                            {validationResult.details.sender.substring(
+                              validationResult.details.sender.length - 4
+                            )}
+                          </p>
+                          <p>Expiry: {formatDate(validationResult.details.expiry)}</p>
                         </div>
                       </div>
                     </div>
@@ -321,22 +347,31 @@ export default function ValidateGiftCard() {
                 </Card>
 
                 {/* Detailed Information */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Amount:</span>
-                    <span className="text-sm font-medium">
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="font-medium">
                       {validationResult.details.amount} {validationResult.details.token}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Message:</span>
-                    <span className="text-sm font-medium italic">
+                    <span className="text-muted-foreground">Message:</span>
+                    <span className="font-medium italic">
                       "{validationResult.details.message}"
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">From:</span>
-                    <span className="font-mono text-sm address-tag">
+                    <span className="text-muted-foreground">Token Address:</span>
+                    <span className="font-mono address-tag">
+                      {validationResult.details.tokenAddress.substring(0, 6)}...
+                      {validationResult.details.tokenAddress.substring(
+                        validationResult.details.tokenAddress.length - 4
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">From:</span>
+                    <span className="font-mono address-tag">
                       {validationResult.details.sender.substring(0, 6)}...
                       {validationResult.details.sender.substring(
                         validationResult.details.sender.length - 4
@@ -344,41 +379,53 @@ export default function ValidateGiftCard() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Status:</span>
+                    <span className="text-muted-foreground">Status:</span>
                     <span
-                      className={`text-sm font-medium flex items-center gap-1 ${
+                      className={`font-medium flex items-center gap-1 ${
                         validationResult.details.claimed ? "text-red-400" : "text-green-400"
                       }`}
                     >
-                      <span className={`w-2 h-2 rounded-full ${validationResult.details.claimed ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          validationResult.details.claimed ? "bg-red-500" : "bg-green-500"
+                        }`}
+                      ></span>
                       {validationResult.details.claimed ? "Claimed" : "Available"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Contract Status:</span>
-                    <span className="text-sm font-medium">
+                    <span className="text-muted-foreground">Contract Status:</span>
+                    <span
+                      className={`font-medium ${
+                        validationResult.details.status === "ACTIVE"
+                          ? "text-blue-400"
+                          : validationResult.details.status === "RECLAIMED"
+                          ? "text-purple-400"
+                          : "text-gray-400"
+                      }`}
+                    >
                       {validationResult.details.status}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Created:</span>
-                    <span className="text-sm">
-                      {new Date(
-                        parseInt(validationResult.details.timeCreated) * 1000
-                      ).toLocaleString()}
-                    </span>
+                    <span className="text-muted-foreground">Created:</span>
+                    <span>{formatDate(validationResult.details.timeCreated)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Expiry:</span>
-                    <span className="text-sm">
-                      {new Date(
-                        parseInt(validationResult.details.expiry) * 1000
-                      ).toLocaleString()}
+                    <span className="text-muted-foreground">Expiry:</span>
+                    <span
+                      className={`${
+                        parseInt(validationResult.details.expiry) * 1000 > Date.now()
+                          ? "text-white"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {formatDate(validationResult.details.expiry)}
                     </span>
                   </div>
                 </div>
 
-                <div className="text-center text-sm text-muted-foreground">
+                <div className="text-center text-xs sm:text-sm text-muted-foreground">
                   <p>
                     This gift card{" "}
                     {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
@@ -387,10 +434,10 @@ export default function ValidateGiftCard() {
                 </div>
               </div>
             )}
-
+    
             <Button
               variant="ghost"
-              className="mt-4 w-full gap-2"
+              className="mt-4 w-full gap-2 text-xs sm:text-sm"
               onClick={handleCloseModal}
             >
               {validationResult.isValid ? "Validate Another Code" : "Try Another Code"}
