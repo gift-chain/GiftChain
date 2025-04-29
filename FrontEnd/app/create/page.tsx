@@ -10,6 +10,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Zap } from "lucide-react"
 import WalletConnect from "@/components/wallet-connect"
+<<<<<<< HEAD
+
+export default function CreateGiftCard() {
+  const [isConnected, setIsConnected] = useState(false)
+  const [walletAddress, setWalletAddress] = useState("")
+  const [amount, setAmount] = useState("")
+  const [currency, setCurrency] = useState("ETH")
+  const [recipient, setRecipient] = useState("")
+  const [message, setMessage] = useState("")
+  const [selectedDesign, setSelectedDesign] = useState(0)
+  const [isCreating, setIsCreating] = useState(false)
+=======
 // skjnlgk
 // import { useNavigate } from 'react-router-dom';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
@@ -78,6 +90,7 @@ export default function CreateGiftCard() {
   // const [message, setMessage] = useState("")
   const [selectedDesign, setSelectedDesign] = useState(0)
   // const [isCreating, setIsCreating] = useState(false)
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
 
   const router = useRouter()
   const { toast } = useToast()
@@ -89,6 +102,29 @@ export default function CreateGiftCard() {
     "/placeholder.svg?height=200&width=320",
   ]
 
+<<<<<<< HEAD
+  const handleConnect = (address: string) => {
+    setIsConnected(true)
+    setWalletAddress(address)
+  }
+
+  const handleCreateGiftCard = async () => {
+    if (!amount) {
+      toast({
+        title: "Missing amount",
+        description: "Please enter an amount for the gift card",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsCreating(true)
+
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+=======
   // const handleConnect = (address: string) => {
   //   setIsConnected(true)
   //   setWalletAddress(address)
@@ -251,10 +287,29 @@ export default function CreateGiftCard() {
         creator: address,
       });
       console.log(response)
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
       toast({
         title: "Gift Card Created",
         description: "Your gift card has been created successfully!",
       })
+<<<<<<< HEAD
+
+      router.push("/dashboard")
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create gift card. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  if (!isConnected) {
+    return <WalletConnect onConnect={handleConnect} />
+  }
+=======
       if (response.data.success) {
         setGift({ ...response.data.details, token: form.token });
         setForm({ token: 'USDT', amount: '', expiry: '', message: '' });
@@ -286,6 +341,7 @@ export default function CreateGiftCard() {
   };
 
 
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
 
   return (
     <div className="container py-8 max-w-3xl hexagon-bg">
@@ -307,6 +363,13 @@ export default function CreateGiftCard() {
               <div className="flex gap-2">
                 <Input
                   id="amount"
+<<<<<<< HEAD
+                  placeholder="0.0"
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+=======
                   type="number"
                   name="amount"
                   value={form.amount}
@@ -314,10 +377,19 @@ export default function CreateGiftCard() {
                   placeholder="Enter amount"
                   step="0.01"
                   min="0"
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
                   className="bg-background/40 border-primary/30"
                 />
                 <select
                   className="bg-background/40 border border-primary/30 rounded-md px-3 py-2 w-24"
+<<<<<<< HEAD
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                >
+                  <option>ETH</option>
+                  <option>USDC</option>
+                  <option>USDT</option>
+=======
                   name="token"
                   value={form.token}
                   onChange={handleChange}
@@ -327,10 +399,34 @@ export default function CreateGiftCard() {
                     {token}
                   </option>
                 ))}
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
                 </select>
               </div>
             </div>
 
+<<<<<<< HEAD
+            <div className="space-y-2">
+              <Label htmlFor="recipient">Recipient Address (Optional)</Label>
+              <Input
+                id="recipient"
+                placeholder="0x..."
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                className="bg-background/40 border-primary/30 font-mono"
+              />
+              <p className="text-sm text-muted-foreground">
+                Leave empty to create a gift card that anyone can claim with the link.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message (Optional)</Label>
+              <Textarea
+                id="message"
+                placeholder="Happy Birthday!"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+=======
             {/* Expiration Input */}
             <div className="space-y-2">
               <Label htmlFor="expiry">Set Expiration</Label>
@@ -353,6 +449,7 @@ export default function CreateGiftCard() {
                 placeholder="Drop a short message"
                 value={form.message}
                 onChange={handleChange}
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
                 className="min-h-[100px] bg-background/40 border-primary/30"
               />
             </div>
@@ -383,6 +480,13 @@ export default function CreateGiftCard() {
           </div>
 
           <div className="mt-8">
+<<<<<<< HEAD
+            <Button className="w-full gap-2 glow-border" size="lg" onClick={handleCreateGiftCard} disabled={isCreating}>
+              <Zap className="h-5 w-5" />
+              {isCreating ? "Creating..." : "Create Gift Card"}
+            </Button>
+          </div>
+=======
             <Button className="w-full gap-2 glow-border" size="lg" onClick={handleSubmit} disabled={isLoading || isApproving || !address}>
               <Zap className="h-5 w-5" />
               {isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
@@ -392,6 +496,7 @@ export default function CreateGiftCard() {
           {/* Error Message */}
           {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
         </div>
 
         <div>
@@ -408,14 +513,28 @@ export default function CreateGiftCard() {
                 <div className="absolute inset-0 flex flex-col justify-center items-center text-white p-6 z-20">
                   <div className="text-center">
                     <div className="text-3xl font-bold mb-2 glow-text">
+<<<<<<< HEAD
+                      {amount || "0.0"} {currency}
+                    </div>
+                    {message && <p className="text-sm italic">"{message}"</p>}
+=======
                       {form.amount || "0.0"} {form.token}
                     </div>
                     {form.message && <p className="text-sm italic">"{form.message}"</p>}
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
                   </div>
                 </div>
               </div>
               <div className="p-4">
                 <div className="flex justify-between items-center mb-2">
+<<<<<<< HEAD
+                  <span className="text-sm text-muted-foreground">From:</span>
+                  <span className="font-mono text-sm address-tag">
+                    {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
+                  </span>
+                </div>
+                {recipient && (
+=======
                   <span className="text-sm text-muted-foreground">Expiry:</span>
                   <span className="font-mono text-sm address-tag">
                     {/* {format(new Date(Number(form.expiry) * 1000), "yyyy-MM-dd'T'HH:mm")} */}
@@ -423,18 +542,27 @@ export default function CreateGiftCard() {
                   </span>
                 </div>
                 {/* {recipient && (
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">To:</span>
                     <span className="font-mono text-sm address-tag">
                       {recipient.substring(0, 6)}...{recipient.substring(recipient.length - 4)}
                     </span>
                   </div>
+<<<<<<< HEAD
+                )}
+=======
                 )} */}
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
               </div>
             </CardContent>
           </Card>
 
+<<<<<<< HEAD
+          <div className="mt-6 space-y-4 glass p-4 rounded-lg border border-primary/30">
+=======
           {/* <div className="mt-6 space-y-4 glass p-4 rounded-lg border border-primary/30">
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
             <h3 className="text-lg font-medium gradient-text">How it works</h3>
             <div className="space-y-2">
               <p className="text-sm flex items-center gap-2">
@@ -472,9 +600,17 @@ export default function CreateGiftCard() {
                 </span>
               </p>
             </div>
+<<<<<<< HEAD
+          </div>
+=======
           </div> */}
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
         </div>
       </div>
     </div>
   )
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> b396be8c6efb915fc240ea6a020ff899eb3ffe0c
