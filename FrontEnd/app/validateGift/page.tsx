@@ -434,7 +434,7 @@ export default function ValidateGiftCard() {
                 </div>
               </div>
             )}
-
+    
             <Button
               variant="ghost"
               className="mt-4 w-full gap-2 text-xs sm:text-sm"
