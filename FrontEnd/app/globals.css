@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 153 59% 38%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 196 65% 33%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 153 59% 38%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.glow-text {
+  text-shadow: 0 0 10px rgba(40, 153, 102, 0.5), 0 0 20px rgba(40, 153, 102, 0.3);
+}
+
+.glow-border {
+  box-shadow: 0 0 10px rgba(40, 153, 102, 0.3), 0 0 20px rgba(40, 153, 102, 0.2);
+}
+
+.glow-card {
+  box-shadow: 0 0 15px rgba(40, 153, 102, 0.2), 0 0 30px rgba(40, 153, 102, 0.1);
+}
+
+.glow-secondary {
+  box-shadow: 0 0 10px rgba(30, 107, 140, 0.3), 0 0 20px rgba(30, 107, 140, 0.2);
+}
+
+.glass {
+  background: rgba(30, 30, 46, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mesh-bg {
+  background-image: radial-gradient(at 40% 20%, rgba(40, 153, 102, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(30, 107, 140, 0.1) 0px, transparent 50%),
+    radial-gradient(at 10% 70%, rgba(40, 153, 102, 0.1) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+.grid-bg {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(40, 153, 102, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(40, 153, 102, 0.05) 1px, transparent 1px);
+}
+
+.hexagon-bg {
+  background-color: #0f0f13;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%23289966' fill-opacity='0.05' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.crypto-card {
+  background: linear-gradient(135deg, rgba(40, 153, 102, 0.2) 0%, rgba(30, 107, 140, 0.2) 100%);
+  border: 1px solid rgba(40, 153, 102, 0.3);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.crypto-card-hover {
+  transition: all 0.3s ease;
+}
+
+.crypto-card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(40, 153, 102, 0.4);
+}
+
+.address-tag {
+  background: rgba(40, 153, 102, 0.1);
+  border: 1px solid rgba(40, 153, 102, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: monospace;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #289966, #1e6b8c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.gift-card-bg {
+  background: linear-gradient(135deg, rgba(40, 153, 102, 0.8) 0%, rgba(30, 107, 140, 0.8) 100%);
+}
+
+.gift-card-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+.stat-card {
+  background: rgba(40, 153, 102, 0.05);
+  border: 1px solid rgba(40, 153, 102, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(40, 153, 102, 0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(40, 153, 102, 0.3);
+}
+
+.stat-icon {
+  background: rgba(40, 153, 102, 0.2);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(90deg, #289966, #1e6b8c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.counter {
+  display: inline-block;
+  animation: countUp 2s ease-out forwards;
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
