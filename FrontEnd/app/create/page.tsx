@@ -9,47 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Zap } from "lucide-react"
-import WalletConnect from "@/components/wallet-connect"
-// skjnlgk
-// import { useNavigate } from 'react-router-dom';
+
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Contract, BrowserProvider, parseUnits, MaxUint256 } from 'ethers';
-// import giftcard from '../assets/giftcard.png';
-// import { GiftCard } from '../ui/GiftCard';
-// import Container from '../ui/Container';
-
-// Minimal ERC-20 ABI for allowance, approve, decimals
-const ERC20_ABI = [
-  {
-    constant: true,
-    inputs: [
-      { name: '_owner', type: 'address' },
-      { name: '_spender', type: 'address' },
-    ],
-    name: 'allowance',
-    outputs: [{ name: '', type: 'uint256' }],
-    type: 'function',
-  },
-  {
-    constant: false,
-    inputs: [
-      { name: '_spender', type: 'address' },
-      { name: '_value', type: 'uint256' },
-    ],
-    name: 'approve',
-    outputs: [{ name: '', type: 'bool' }],
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'decimals',
-    outputs: [{ name: '', type: 'uint8' }],
-    type: 'function',
-  },
-];
+import { Contract, BrowserProvider, parseUnits } from 'ethers';
+// ERC-20 ABI for allowance, approve, decimals
+import ERC20_ABI from "@/abi/ERC20_ABI.json";
+import { maxUint64 } from "viem"
 
 interface GiftForm {
   token: string;
@@ -69,6 +36,12 @@ interface GiftResponse {
   downloadUrl: string;
 }
 
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
+
 export default function CreateGiftCard() {
   // const [isConnected, setIsConnected] = useState(false)
   // const [walletAddress, setWalletAddress] = useState("")
@@ -81,6 +54,21 @@ export default function CreateGiftCard() {
 
   const router = useRouter()
   const { toast } = useToast()
+  const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+  const [form, setForm] = useState<GiftForm>({
+    token: 'USDT',
+    amount: '',
+    expiry: '',
+    message: '',
+  });
+  const [gift, setGift] = useState<GiftResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [checkingAllowance, setCheckingAllowance] = useState(false);
+  const [] = useState()
 
   const cardDesigns = [
     "/placeholder.svg?height=200&width=320",
@@ -132,19 +120,6 @@ export default function CreateGiftCard() {
   // }
 
   // const navigate = useNavigate();
-  const { address } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
-  const [form, setForm] = useState<GiftForm>({
-    token: 'USDT',
-    amount: '',
-    expiry: '',
-    message: '',
-  });
-  const [gift, setGift] = useState<GiftResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
 
   // Relayer address (from creategift.js)
   const RELAYER_ADDRESS = '0xA07139110776DF9621546441fc0a5417B8E945DF';
@@ -157,11 +132,11 @@ export default function CreateGiftCard() {
   };
 
   // Token decimals map (assumes 6 for USDT/USDC/DAI)
-  const tokenDecimals: Record<string, number> = {
-    USDT: 18,
-    USDC: 6,
-    DAI: 18,
-  };
+  // const tokenDecimals: Record<string, number> = {
+  //   USDT: 18,
+  //   USDC: 6,
+  //   DAI: 18,
+  // };
 
   const tokens = Object.keys(tokenMap);
   const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm");
@@ -169,26 +144,48 @@ export default function CreateGiftCard() {
   // Check allowance and approve if needed
   const checkAndApprove = async (tokenAddress: string, amount: string) => {
     if (!publicClient || !walletClient || !address) return false;
-
     try {
       // Initialize Ethers.js provider and signer
       const provider = new BrowserProvider(walletClient.transport);
       const signer = await provider.getSigner();
       const tokenContract = new Contract(tokenAddress, ERC20_ABI, signer);
-
+      const tokenContractDetails = {
+        address: tokenAddress,
+        abi: ERC20_ABI,
+      }
+      
+      console.log("Got here.")
       // Get decimals
-      const decimals = tokenDecimals[form.token] || 6;
-      const amountBN = parseUnits(amount, decimals);
-
+      // const decimals = tokenDecimals[form.token] || 6;
+      // const decimals = await tokenContract.decimals();
+      const decimals = await publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "decimals",
+      })
+      console.log(decimals)
+      const amountBN = parseUnits(amount, BigInt(decimals!.toString()));
+      
       // Check allowance
-      const allowance = await tokenContract.allowance(address, RELAYER_ADDRESS);
-      if (BigInt(allowance.toString()) < BigInt(amountBN.toString())) {
+      // const allowance = await tokenContract.allowance(address, RELAYER_ADDRESS);
+      const allowance = await publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "allowance",
+        args: [signer.address, RELAYER_ADDRESS]
+      });
+      console.log("Allowance => ", allowance)
+      console.log("Got here..")
+      if (BigInt(allowance!.toString()) < BigInt(amountBN.toString())) {
         setIsApproving(true);
         // Approve the exact amount
-        const tx = await tokenContract.approve(RELAYER_ADDRESS, amountBN);
-        // Optionally, approve MaxUint256 to avoid future approvals
-        // const tx = await tokenContract.approve(RELAYER_ADDRESS, MaxUint256);
-        await tx.wait();
+        const hash = await walletClient.writeContract({
+          address: tokenAddress as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [RELAYER_ADDRESS as `0x${string}`, maxUint64],
+        });
+        console.log(hash)
         setIsApproving(false);
         return true;
       }
@@ -222,7 +219,7 @@ export default function CreateGiftCard() {
       return;
     }
     if (form.message.length < 3 || form.message.length > 50) {
-      setError('Message must be between 3 and 50 characters if provided.');
+      setError('Message must be between 3 and 50 characters.');
       return;
     }
     if (!tokenMap[form.token]) {
@@ -235,7 +232,11 @@ export default function CreateGiftCard() {
     try {
       // Check and approve tokens
       const tokenAddress = tokenMap[form.token];
+      console.log(tokenAddress)
+      setCheckingAllowance(true)
       const isApproved = await checkAndApprove(tokenAddress, form.amount);
+      console.log("Got here...")
+      setCheckingAllowance(false)
       if (!isApproved) return;
 
       // Call backend
@@ -252,20 +253,13 @@ export default function CreateGiftCard() {
       });
       console.log(response)
       toast({
-        title: "Gift Card Created",
-        description: "Your gift card has been created successfully!",
+        title: "Gift Created",
+        description: "Your gift has been created successfully",
       })
       if (response.data.success) {
         setGift({ ...response.data.details, token: form.token });
         setForm({ token: 'USDT', amount: '', expiry: '', message: '' });
-        //Auto-trigger download
-        const link = document.createElement('a');
-        link.href = `http://localhost:3000${response.data.details.downloadUrl}`;
-        link.download = `${response.data.details.giftID}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        // navigate("/dashboard");
+        // navigate('/dashboard');
       } else {
         setError(response.data.error || 'Failed to create gift.');
       }
@@ -285,6 +279,11 @@ export default function CreateGiftCard() {
     }
   };
 
+
+  // if(!isConnected) {
+  //   return <>
+  //   </>
+  // }
 
 
   return (
@@ -385,7 +384,7 @@ export default function CreateGiftCard() {
           <div className="mt-8">
             <Button className="w-full gap-2 glow-border" size="lg" onClick={handleSubmit} disabled={isLoading || isApproving || !address}>
               <Zap className="h-5 w-5" />
-              {isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
+              {checkingAllowance ? "Checking Allowance..." : isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
             </Button>
           </div>
 
@@ -418,61 +417,12 @@ export default function CreateGiftCard() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-muted-foreground">Expiry:</span>
                   <span className="font-mono text-sm address-tag">
-                    {/* {format(new Date(Number(form.expiry) * 1000), "yyyy-MM-dd'T'HH:mm")} */}
-                    {form.expiry.replace("T", " ")}
+                    {form.expiry.replace("T", ", ")}
                   </span>
                 </div>
-                {/* {recipient && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">To:</span>
-                    <span className="font-mono text-sm address-tag">
-                      {recipient.substring(0, 6)}...{recipient.substring(recipient.length - 4)}
-                    </span>
-                  </div>
-                )} */}
               </div>
             </CardContent>
           </Card>
-
-          {/* <div className="mt-6 space-y-4 glass p-4 rounded-lg border border-primary/30">
-            <h3 className="text-lg font-medium gradient-text">How it works</h3>
-            <div className="space-y-2">
-              <p className="text-sm flex items-center gap-2">
-                <span className="bg-primary/20 p-1 rounded-full flex items-center justify-center w-6 h-6 text-xs">
-                  1
-                </span>
-                <span>
-                  <span className="font-medium">Create:</span> Fill in the details and create your gift card.
-                </span>
-              </p>
-              <p className="text-sm flex items-center gap-2">
-                <span className="bg-primary/20 p-1 rounded-full flex items-center justify-center w-6 h-6 text-xs">
-                  2
-                </span>
-                <span>
-                  <span className="font-medium">Share:</span> Send the gift card link to the recipient.
-                </span>
-              </p>
-              <p className="text-sm flex items-center gap-2">
-                <span className="bg-primary/20 p-1 rounded-full flex items-center justify-center w-6 h-6 text-xs">
-                  3
-                </span>
-                <span>
-                  <span className="font-medium">Claim:</span> The recipient connects their wallet and claims the gift
-                  card.
-                </span>
-              </p>
-              <p className="text-sm flex items-center gap-2">
-                <span className="bg-primary/20 p-1 rounded-full flex items-center justify-center w-6 h-6 text-xs">
-                  4
-                </span>
-                <span>
-                  <span className="font-medium">Reclaim:</span> If unclaimed, you can reclaim the gift card back to your
-                  wallet.
-                </span>
-              </p>
-            </div>
-          </div> */}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
- [
+[
   {
     "inputs": [
       {
@@ -358,12 +358,12 @@
     "outputs": [
       {
         "internalType": "bool",
-        "name": "",
+        "name": "isValid",
         "type": "bool"
       },
       {
         "internalType": "string",
-        "name": "",
+        "name": "message",
         "type": "string"
       }
     ],

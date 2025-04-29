@@ -31,7 +31,7 @@ import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from 
 import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
-import giftChainABI from "../abi/giftChainABI.json";
+import giftChainABI from "../abi/GiftChain.json";
 
 // Minimal ERC-20 ABI for decimals()
 const erc20Abi = [
