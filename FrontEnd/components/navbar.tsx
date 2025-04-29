@@ -27,7 +27,8 @@ export default function Navbar() {
     { name: "Home", path: "/" },
     { name: "Dashboard", path: "/dashboard" },
     { name: "Create", path: "/create" },
-    { name: "Reclaim", path: "/how-it-works" },
+    { name: "Validate", path: "/validateGift" },
+    { name: "Reclaim", path: "/reclaimGift" },
   ]
 
   return (
