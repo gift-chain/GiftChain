@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -5,28 +6,23 @@ import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge"; 
+import { Badge } from "@/components/ui/badge";
 import {
   Gift,
   Clock,
   CheckCircle,
   AlertCircle,
-  ArrowRight,
   TrendingUp,
   CreditCard,
   DollarSign,
   Users,
   Calendar,
-  BarChart3,
-  PieChart,
-  LineChart,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
 import WalletConnect from "@/components/wallet-connect";
-import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,59 +71,57 @@ interface PieChartData {
 }
 
 // Pagination Component
-const Pagination = ({ 
-  totalItems, 
-  itemsPerPage, 
-  currentPage, 
-  onPageChange 
-}: { 
-  totalItems: number, 
-  itemsPerPage: number, 
-  currentPage: number, 
-  onPageChange: (page: number) => void 
+const Pagination = ({
+  totalItems,
+  itemsPerPage,
+  currentPage,
+  onPageChange,
+}: {
+  totalItems: number;
+  itemsPerPage: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
 }) => {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  
+
   if (totalPages <= 1) return null;
-  
+
   return (
     <div className="flex items-center justify-center space-x-2 mt-6">
-      <Button 
-        variant="outline" 
-        size="icon" 
-        onClick={() => onPageChange(1)} 
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => onPageChange(1)}
         disabled={currentPage === 1}
         className="h-8 w-8 p-0 border glow-border"
       >
         <ChevronsLeft className="h-4 w-4" />
       </Button>
-      <Button 
-        variant="outline" 
-        size="icon" 
-        onClick={() => onPageChange(currentPage - 1)} 
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         className="h-8 w-8 p-0 border glow-border"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      
       <span className="text-sm text-muted-foreground">
         Page {currentPage} of {totalPages}
       </span>
-      
-      <Button 
-        variant="outline" 
-        size="icon" 
-        onClick={() => onPageChange(currentPage + 1)} 
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         className="h-8 w-8 p-0 border glow-border"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
-      <Button 
-        variant="outline" 
-        size="icon" 
-        onClick={() => onPageChange(totalPages)} 
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => onPageChange(totalPages)}
         disabled={currentPage === totalPages}
         className="h-8 w-8 p-0 border glow-border"
       >
@@ -165,7 +159,7 @@ export default function Dashboard() {
   // Pagination states
   const [createdCurrentPage, setCreatedCurrentPage] = useState(1);
   const [receivedCurrentPage, setReceivedCurrentPage] = useState(1);
-  const [cardsPerPage, setCardsPerPage] = useState(6);
+  const [cardsPerPage] = useState(6);
 
   // Debug counters
   const computeDataCount = useRef(0);
@@ -194,11 +188,13 @@ export default function Dashboard() {
   // Paginated gift cards
   const paginatedCreatedGiftCards = useMemo(() => {
     const startIndex = (createdCurrentPage - 1) * cardsPerPage;
+    console.log("Slicing createdGiftCards:", { startIndex, endIndex: startIndex + cardsPerPage, total: createdGiftCards.length });
     return createdGiftCards.slice(startIndex, startIndex + cardsPerPage);
   }, [createdGiftCards, createdCurrentPage, cardsPerPage]);
 
   const paginatedReceivedGiftCards = useMemo(() => {
     const startIndex = (receivedCurrentPage - 1) * cardsPerPage;
+    console.log("Slicing receivedGiftCards:", { startIndex, endIndex: startIndex + cardsPerPage, total: receivedGiftCards.length });
     return receivedGiftCards.slice(startIndex, startIndex + cardsPerPage);
   }, [receivedGiftCards, receivedCurrentPage, cardsPerPage]);
 
@@ -401,6 +397,11 @@ export default function Dashboard() {
     setIsLoading(true);
 
     try {
+      // Initialize Sets for status checks
+      const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
+      const claimedGiftIds = new Set(claimedGifts.map((c) => c.gift.id.toLowerCase()));
+      const currentDate = new Date();
+
       // Stats
       let totalGiftValue = 0;
       const totalCreated = allGifts.length;
@@ -430,29 +431,44 @@ export default function Dashboard() {
       });
 
       // Created gift cards
-      const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
       const newCreatedGiftCards: GiftCard[] = [];
       for (const gift of allGifts) {
         const { symbol, decimals } = await fetchTokenMetadata(gift.token);
         const expiryDate = new Date(parseInt(gift.expiry) * 1000);
-        const isExpired = expiryDate < new Date();
+        const isExpired = expiryDate < currentDate;
         const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
+        const isClaimed = claimedGiftIds.has(gift.id.toLowerCase());
         const formattedAmount = parseFloat(formatUnits(gift.amount, decimals)).toFixed(2);
+
+        let status: string;
+        if (isReclaimed) {
+          status = "reclaimed";
+        } else if (isClaimed) {
+          status = "claimed";
+        } else if (isExpired) {
+          status = "expired";
+        } else {
+          status = "pending";
+        }
 
         newCreatedGiftCards.push({
           id: giftIDs[gift.id.toLowerCase()] || gift.id,
           amount: `${formattedAmount} ${symbol}`,
-          recipient: gift.claimed?.recipient || "N/A",
+          recipient: gift.claimed?.recipient
+            ? `${gift.claimed.recipient.slice(0, 6)}...${gift.claimed.recipient.slice(-4)}`
+            : "N/A",
           message: gift.message || "No message",
           expiryDate: expiryDate.toISOString().split("T")[0],
-          status: isReclaimed ? "reclaimed" : isExpired ? "expired" : gift.status.toLowerCase(),
+          status,
           createdDate: new Date(parseInt(gift.timeCreated) * 1000).toISOString().split("T")[0],
           claimedDate: gift.claimed
             ? new Date(parseInt(gift.claimed.blockTimestamp) * 1000).toISOString().split("T")[0]
             : null,
           theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
         });
+        
       }
+      console.log("Setting createdGiftCards:", newCreatedGiftCards);
       setCreatedGiftCards(newCreatedGiftCards);
 
       // Received gift cards
@@ -469,13 +485,14 @@ export default function Dashboard() {
           sender: "N/A",
           message: claimed.gift.message || "No message",
           expiryDate: expiryDate.toISOString().split("T")[0],
-          status: claimed.gift.status.toLowerCase(),
+          status: "claimed",
           createdDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0],
           receivedDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0],
           claimedDate: new Date(parseInt(claimed.blockTimestamp) * 1000).toISOString().split("T")[0],
           theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
         });
       }
+      console.log("Setting receivedGiftCards:", newReceivedGiftCards);
       setReceivedGiftCards(newReceivedGiftCards);
 
       // Area chart data
@@ -504,6 +521,7 @@ export default function Dashboard() {
         name: month,
         total: monthlyData[month] || 0,
       }));
+      console.log("Setting areaChartData:", newAreaChartData);
       setAreaChartData(newAreaChartData);
 
       // Bar chart data
@@ -516,34 +534,53 @@ export default function Dashboard() {
         name,
         total,
       }));
+      console.log("Setting barChartData:", newBarChartData);
       setBarChartData(newBarChartData);
 
-      // Pie chart data
+      // Pie chart data (Fixed for accuracy)
       const statusCounts = {
         Claimed: 0,
         Pending: 0,
         Expired: 0,
         Reclaimed: 0,
       };
-      allGifts.forEach((gift) => {
+
+      for (const gift of allGifts) {
+        const giftId = gift.id.toLowerCase();
         const expiryDate = new Date(parseInt(gift.expiry) * 1000);
-        const isExpired = expiryDate < new Date();
-        if (gift.status === "CLAIMED") {
-          statusCounts.Claimed += 1;
-        } else if (gift.status === "RECLAIMED") {
+        const isExpired = expiryDate < currentDate;
+        const isClaimed = claimedGiftIds.has(giftId);
+        const isReclaimed = reclaimedGiftIds.has(giftId);
+
+        let status: string;
+        if (isReclaimed) {
           statusCounts.Reclaimed += 1;
+          status = "Reclaimed";
+        } else if (isClaimed) {
+          statusCounts.Claimed += 1;
+          status = "Claimed";
         } else if (isExpired) {
           statusCounts.Expired += 1;
+          status = "Expired";
         } else {
           statusCounts.Pending += 1;
+          status = "Pending";
         }
-      });
+        console.log(`Gift ${giftId} status: ${status}`, {
+          isClaimed,
+          isReclaimed,
+          isExpired,
+          giftStatus: gift.status,
+        });
+      }
+
       const newPieChartData = Object.entries(statusCounts)
         .filter(([_, value]) => value > 0)
         .map(([name, value]) => ({
           name,
           value,
         }));
+      console.log("Setting pieChartData:", newPieChartData);
       setPieChartData(newPieChartData);
     } catch (error) {
       console.error("Error computing data:", error);
@@ -673,7 +710,7 @@ export default function Dashboard() {
 
       {/* Overview Cards */}
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="overflow-hidden glass glow-card">
+        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total Created</CardTitle>
             <Gift className="h-4 w-4 text-primary" />
@@ -684,10 +721,9 @@ export default function Dashboard() {
               <TrendingUp className="mr-1 h-3 w-3" />
               +{stats.createdGrowth}% from last month
             </div>
-            <Progress className="mt-3 bg-muted" value={stats.totalCreated * 10} />
           </CardContent>
         </Card>
-        <Card className="overflow-hidden glass glow-card">
+        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total Received</CardTitle>
             <CreditCard className="h-4 w-4 text-primary" />
@@ -698,10 +734,9 @@ export default function Dashboard() {
               <TrendingUp className="mr-1 h-3 w-3" />
               +{stats.receivedGrowth}% from last month
             </div>
-            <Progress className="mt-3 bg-muted" value={stats.totalReceived * 20} />
           </CardContent>
         </Card>
-        <Card className="overflow-hidden glass glow-card">
+        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total Value</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
@@ -709,10 +744,9 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-foreground glow-text">{stats.totalGiftValue} USD</div>
             <div className="mt-1 flex items-center text-xs text-muted-foreground">≈ </div>
-            <Progress className="mt-3 bg-muted" value={parseFloat(stats.totalGiftValue) / 10} />
           </CardContent>
         </Card>
-        <Card className="overflow-hidden glass glow-card">
+        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Claim Rate</CardTitle>
             <Users className="h-4 w-4 text-primary" />
@@ -723,12 +757,11 @@ export default function Dashboard() {
               <TrendingUp className="mr-1 h-3 w-3" />
               +{stats.claimRateGrowth}% from last month
             </div>
-            <Progress className="mt-3 bg-muted" value={parseFloat(stats.claimRate)} />
           </CardContent>
         </Card>
       </div>
 
-      {/* Analytics Section - Revamped Layout */}
+      {/* Analytics Section */}
       <div className="mb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold gradient-text">Analytics</h2>
@@ -743,75 +776,77 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
         </div>
-        
-        {/* New Analytics Grid Layout */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* Activity Chart - Full width on mobile, 2 cols on desktop */}
-          <Card className="lg:col-span-2 glass glow-card">
+        <div className="flex flex-col gap-4 md:flex-row md:gap-4">
+          <Card className="flex-1 glass glow-card" style={{ display: "block", opacity: 1, minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Gift Card Activity</CardTitle>
                 <CardDescription>Monthly gift card creation and claims</CardDescription>
               </div>
-              <BarChart3 className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent className="pl-2">
-              <div className="h-[250px] w-full">
-                <AreaChart
-                  data={areaChartData}
-                  index="name"
-                  categories={["total"]}
-                  colors={["#00ddeb"]}
-                  valueFormatter={(value) => `$${value.toFixed(2)}`}
-                  className="h-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Status Distribution - Full width on mobile, 1 col on desktop */}
-          <Card className="glass glow-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle className="gradient-text">Status Distribution</CardTitle>
-                <CardDescription>Current gift card statuses</CardDescription>
-              </div>
-              <PieChart className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="h-[250px] w-full">
-                <PieChartComponent
-                  data={pieChartData}
-                  index="name"
-                  valueFormatter={(value) => `${value}`}
-                  category="value"
-                  colors={["#00ddeb", "#39ff14", "#ff00ff", "#00b7eb"]}
-                  className="h-full"
-                />
-              </div>
+              {areaChartData.length === 0 ? (
+                <p className="text-center text-muted-foreground">No data available</p>
+              ) : (
+                <div className="h-[200px] w-full">
+                  <AreaChart
+                    data={areaChartData}
+                    index="name"
+                    categories={["total"]}
+                    colors={["#00ddeb"]}
+                    valueFormatter={(value) => `$${value.toFixed(2)}`}
+                    className="h-full w-full"
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          {/* Currency Distribution - Full width */}
-          <Card className="lg:col-span-3 glass glow-card">
+          <Card className="flex-1 glass glow-card" style={{ display: "block", opacity: 1, minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Currency Distribution</CardTitle>
                 <CardDescription>Gift cards by currency type</CardDescription>
               </div>
-              <LineChart className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="h-[250px] w-full">
-                <BarChart
-                  data={barChartData}
-                  index="name"
-                  categories={["total"]}
-                  colors={["#00b7eb"]}
-                  valueFormatter={(value) => `${value} cards`}
-                  className="h-full"
-                />
+              {barChartData.length === 0 ? (
+                <p className="text-center text-muted-foreground">No data available</p>
+              ) : (
+                <div className="h-[200px] w-full">
+                  <BarChart
+                    data={barChartData}
+                    index="name"
+                    categories={["total"]}
+                    colors={["#00b7eb"]}
+                    valueFormatter={(value) => `${value} cards`}
+                    className="h-full w-full"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="flex-1 glass glow-card" style={{ display: "block", opacity: 1, minHeight: "250px" }}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="gradient-text">Status Distribution</CardTitle>
+                <CardDescription>Current gift card statuses</CardDescription>
               </div>
+            </CardHeader>
+            <CardContent>
+              {pieChartData.length === 0 ? (
+                <p className="text-center text-muted-foreground">No gift card data available</p>
+              ) : (
+                <div className="h-[200px] w-full">
+                  <PieChartComponent
+                    data={pieChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    colors={["#39ff14", "#00ddeb", "#ff00ff", "#00b7eb"]} // Claimed, Pending, Expired, Reclaimed
+                    valueFormatter={(value) => `${value}`}
+                    className="h-full w-full"
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -819,29 +854,33 @@ export default function Dashboard() {
 
       {/* Calendar View */}
       <div className="mb-8">
-        <Card className="glass glow-card">
+        <Card className="glass glow-card" style={{ display: "block", opacity: 1 }}>
           <CardHeader>
             <CardTitle className="gradient-text">Upcoming Expirations</CardTitle>
             <CardDescription>Gift cards that will expire soon</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {createdGiftCards
-                .filter((card) => card.status === "pending")
-                .slice(0, 3) // Show only 3 upcoming expirations
-                .map((card) => (
-                  <div key={card.id} className="flex items-center gap-4 rounded-lg border p-3 glass glow-border">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-                      <Calendar className="h-5 w-5 text-primary" />
+            {createdGiftCards.filter((card) => card.status === "pending").length === 0 ? (
+              <p className="text-center text-muted-foreground">No pending gift cards</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {createdGiftCards
+                  .filter((card) => card.status === "pending")
+                  .slice(0, 3)
+                  .map((card) => (
+                    <div key={card.id} className="flex items-center gap-4 rounded-lg border p-3 glass glow-border">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+                        <Calendar className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-primary">{card.id}</p>
+                        <p className="text-sm text-muted-foreground">Expires: {card.expiryDate}</p>
+                        <p className="text-sm text-muted-foreground">Amount: {card.amount}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-primary">{card.id}</p>
-                      <p className="text-sm text-muted-foreground">Expires: {card.expiryDate}</p>
-                      <p className="text-sm text-muted-foreground">Amount: {card.amount}</p>
-                    </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -862,107 +901,109 @@ export default function Dashboard() {
             Received Gift Cards ({receivedGiftCards.length})
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="created">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {paginatedCreatedGiftCards.map((card) => (
-              <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-primary">{card.amount}</CardTitle>
-                    {card.status === "claimed" && (
-                      <Badge className="bg-primary text-primary-foreground">
-                        <CheckCircle className="mr-1 h-3 w-3" /> Claimed
-                      </Badge>
-                    )}
-                    {card.status === "pending" && (
-                      <Badge variant="outline" className="border text-primary glow-border">
-                        <Clock className="mr-1 h-3 w-3" /> Pending
-                      </Badge>
-                    )}
+          {paginatedCreatedGiftCards.length === 0 ? (
+            <p className="text-center text-muted-foreground">No created gift cards available.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {paginatedCreatedGiftCards.map((card) => (
+                <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`} style={{ display: "block", opacity: 1 }}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-primary">{card.amount}</CardTitle>
+                      {card.status === "claimed" && (
+                        <Badge className="bg-primary text-primary-foreground">
+                          <CheckCircle className="mr-1 h-3 w-3" /> Claimed
+                        </Badge>
+                      )}
+                      {card.status === "pending" && (
+                        <Badge variant="outline" className="border text-primary glow-border">
+                          <Clock className="mr-1 h-3 w-3" /> Pending
+                        </Badge>
+                      )}
+                      {card.status === "expired" && (
+                        <Badge variant="destructive" className="bg-red-500/80 border-red-500/50">
+                          <AlertCircle className="mr-1 h-3 w-3" /> Expired
+                        </Badge>
+                      )}
+                      {card.status === "reclaimed" && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-secondary/80 border-secondary/50 text-secondary-foreground"
+                        >
+                          <Gift className="mr-1 h-3 w-3" /> Reclaimed
+                        </Badge>
+                      )}
+                    </div>
+                    <CardDescription className="text-muted-foreground">Gift Card #{card.id}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <div className="mb-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Recipient:</span>
+                        <span className="text-foreground">{card.recipient}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Message:</span>
+                        <span className="text-foreground">{card.message}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Expiry Date:</span>
+                        <span className="text-foreground">{card.expiryDate}</span>
+                      </div>
+                      {card.status === "claimed" && card.claimedDate && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Claimed Date:</span>
+                          <span className="text-foreground">{card.claimedDate}</span>
+                        </div>
+                      )}
+                      {card.status === "pending" && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Created Date:</span>
+                          <span className="text-foreground">{card.createdDate}</span>
+                        </div>
+                      )}
+                      {card.status === "expired" && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Created Date:</span>
+                          <span className="text-foreground">{card.createdDate}</span>
+                        </div>
+                      )}
+                      {card.status === "reclaimed" && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Reclaimed Date:</span>
+                          <span className="text-foreground">{card.createdDate}</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
                     {card.status === "expired" && (
-                      <Badge variant="destructive" className="bg-red-500/80 border-red-500/50">
-                        <AlertCircle className="mr-1 h-3 w-3" /> Expired
-                      </Badge>
-                    )}
-                    {card.status === "reclaimed" && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-secondary/80 border-secondary/50 text-secondary-foreground"
+                      <Button
+                        asChild
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-border"
                       >
-                        <Gift className="mr-1 h-3 w-3" /> Reclaimed
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription className="text-muted-foreground">Gift Card #{card.id}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="mb-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Recipient:</span>
-                      <span className="text-foreground">{card.recipient}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Message:</span>
-                      <span className="text-foreground">{card.message}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Expiry Date:</span>
-                      <span className="text-foreground">{card.expiryDate}</span>
-                    </div>
-                    {card.status === "claimed" && card.claimedDate && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Claimed Date:</span>
-                        <span className="text-foreground">{card.claimedDate}</span>
-                      </div>
+                        <Link href={`/gift-actions?action=reclaim&id=${card.id}`}>
+                          Reclaim <Gift className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
                     )}
                     {card.status === "pending" && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Created Date:</span>
-                        <span className="text-foreground">{card.createdDate}</span>
-                      </div>
+                      <Button variant="outline" asChild className="w-full border hover:bg-primary/10 glow-border">
+                        <Link href={`/gift-actions?action=validate&id=${card.id}`}>Check Status</Link>
+                      </Button>
                     )}
-                    {card.status === "expired" && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Created Date:</span>
-                        <span className="text-foreground">{card.createdDate}</span>
-                      </div>
+                    {(card.status === "claimed" || card.status === "reclaimed") && (
+                      <Button variant="outline" asChild className="w-full border hover:bg-primary/10 glow-border">
+                        <Link href={`/gift/${card.id}`}>View Details</Link>
+                      </Button>
                     )}
-                    {card.status === "reclaimed" && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Reclaimed Date:</span>
-                        <span className="text-foreground">{card.createdDate}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  {card.status === "expired" && (
-                    <Button
-                      asChild
-                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-border"
-                    >
-                      <Link href={`/gift-actions?action=reclaim&id=${card.id}`}>
-                        Reclaim <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  )}
-                  {card.status === "pending" && (
-                    <Button variant="outline" asChild className="w-full border hover:bg-primary/10 glow-border">
-                      <Link href={`/gift-actions?action=validate&id=${card.id}`}>Check Status</Link>
-                    </Button>
-                  )}
-                  {(card.status === "claimed" || card.status === "reclaimed") && (
-                    <Button variant="outline" asChild className="w-full border hover:bg-primary/10 glow-border">
-                      <Link href={`/gift/${card.id}`}>View Details</Link>
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-          
-          {/* Pagination for Created Gift Cards */}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
           <Pagination
             totalItems={createdGiftCards.length}
             itemsPerPage={cardsPerPage}
@@ -970,99 +1011,79 @@ export default function Dashboard() {
             onPageChange={setCreatedCurrentPage}
           />
         </TabsContent>
-        
+
         <TabsContent value="received">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {paginatedReceivedGiftCards.map((card) => (
-              <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-primary">{card.amount}</CardTitle>
-                    {card.status === "claimed" && (
-                      <Badge className="bg-primary text-primary-foreground">
-                        <CheckCircle className="mr-1 h-3 w-3" /> Claimed
-                      </Badge>
-                    )}
-                    {card.status === "pending" && (
-                      <Badge variant="outline" className="border text-primary glow-border">
-                        <Clock className="mr-1 h-3 w-3" /> Pending
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription className="text-muted-foreground">Gift Card #{card.id}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="mb-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Sender:</span>
-                      <span className="text-foreground">{card.sender}</span>
+          {paginatedReceivedGiftCards.length === 0 ? (
+            <p className="text-center text-muted-foreground">No received gift cards available.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {paginatedReceivedGiftCards.map((card) => (
+                <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`} style={{ display: "block", opacity: 1 }}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-primary">{card.amount}</CardTitle>
+                      {card.status === "claimed" && (
+                        <Badge className="bg-primary text-primary-foreground">
+                          <CheckCircle className="mr-1 h-3 w-3" /> Claimed
+                        </Badge>
+                      )}
+                      {card.status === "pending" && (
+                        <Badge variant="outline" className="border text-primary glow-border">
+                          <Clock className="mr-1 h-3 w-3" /> Pending
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Message:</span>
-                      <span className="text-foreground">{card.message}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Expiry Date:</span>
-                      <span className="text-foreground">{card.expiryDate}</span>
-                    </div>
-                    {card.status === "claimed" && (
+                    <CardDescription className="text-muted-foreground">Gift Card #{card.id}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <div className="mb-4 space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Claimed Date:</span>
-                        <span className="text-foreground">{card.claimedDate}</span>
+                        <span className="text-muted-foreground">Sender:</span>
+                        <span className="text-foreground">{card.sender}</span>
                       </div>
-                    )}
-                    {card.status === "pending" && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Received Date:</span>
-                        <span className="text-foreground">{card.receivedDate}</span>
+                        <span className="text-muted-foreground">Message:</span>
+                        <span className="text-foreground">{card.message}</span>
                       </div>
-                    )}
-                  </div>
-                  {card.status === "pending" && (
-                    <div className="mt-4">
-                      <div className="mb-1 flex justify-between text-xs">
-                        <span>Time Remaining</span>
-                        <span>
-                          {Math.ceil(
-                            (new Date(card.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-                          )}{" "}
-                          days
-                        </span>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Expiry Date:</span>
+                        <span className="text-foreground">{card.expiryDate}</span>
                       </div>
-                      <Progress
-                        value={
-                          ((new Date(card.expiryDate).getTime() - new Date().getTime()) /
-                            (new Date(card.expiryDate).getTime() -
-                            new Date(card.receivedDate || card.createdDate).getTime())) *
-                          100
-                        }
-                        className="h-2 bg-muted"
-                      />
+                      {card.status === "claimed" && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Claimed Date:</span>
+                          <span className="text-foreground">{card.claimedDate}</span>
+                        </div>
+                      )}
+                      {card.status === "pending" && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Received Date:</span>
+                          <span className="text-foreground">{card.receivedDate}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </CardContent>
-                <CardFooter>
-                  {card.status === "pending" && (
-                    <Button
-                      asChild
-                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-border"
-                    >
-                      <Link href={`/gift-actions?action=claim&id=${card.id}`}>
-                        Claim Now <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  )}
-                  {card.status === "claimed" && (
-                    <Button variant="outline" asChild className="w-full border hover:bg-primary/10 glow-border">
-                      <Link href={`/gift/${card.id}`}>View Details</Link>
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-          
-          {/* Pagination for Received Gift Cards */}
+                  </CardContent>
+                  <CardFooter>
+                    {card.status === "pending" && (
+                      <Button
+                        asChild
+                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-border"
+                      >
+                        <Link href={`/gift-actions?action=claim&id=${card.id}`}>
+                          Claim Now <Gift className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                    {card.status === "claimed" && (
+                      <Button variant="outline" asChild className="w-full border hover:bg-primary/10 glow-border">
+                        <Link href={`/gift/${card.id}`}>View Details</Link>
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
           <Pagination
             totalItems={receivedGiftCards.length}
             itemsPerPage={cardsPerPage}
