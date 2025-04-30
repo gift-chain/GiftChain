@@ -541,7 +541,7 @@ export default function ReclaimGift() {
                 type="text"
                 value={code}
                 onChange={(e) => {
-                  setCode(e.target.value);
+                  setCode(e.target.value.trim());
                   setGiftDetails(null);
                   setTxSuccess(false);
                   setTxHash("");

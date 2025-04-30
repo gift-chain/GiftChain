@@ -308,7 +308,7 @@ export default function CreateGiftCard() {
                   id="amount"
                   type="number"
                   name="amount"
-                  value={form.amount}
+                  value={form.amount.trim()}
                   onChange={handleChange}
                   placeholder="Enter amount"
                   step="0.01"
@@ -412,12 +412,7 @@ export default function CreateGiftCard() {
                   </div>
                 </div>
               </div>
-<<<<<<< HEAD
-              <div class
-                Name="p-4">
-=======
               <div className="p-4">
->>>>>>> 8c024a14a8f2190f4a21551c8e4246628b9d0287
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-muted-foreground">Expiry:</span>
                   <span className="font-mono text-sm address-tag">
