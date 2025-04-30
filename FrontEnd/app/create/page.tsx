@@ -153,7 +153,7 @@ export default function CreateGiftCard() {
         address: tokenAddress,
         abi: ERC20_ABI,
       }
-      
+
       console.log("Got here.")
       // Get decimals
       // const decimals = tokenDecimals[form.token] || 6;
@@ -165,7 +165,7 @@ export default function CreateGiftCard() {
       })
       console.log(decimals)
       const amountBN = parseUnits(amount, BigInt(decimals!.toString()));
-      
+
       // Check allowance
       // const allowance = await tokenContract.allowance(address, RELAYER_ADDRESS);
       const allowance = await publicClient.readContract({
@@ -288,7 +288,7 @@ export default function CreateGiftCard() {
 
   return (
     <div className="container py-8 max-w-3xl hexagon-bg">
-      <Button variant="ghost" className="mb-6 gap-2" onClick={() => router.push("/dashboard")}>
+      {/* <Button variant="ghost" className="mb-6 gap-2" onClick={() => router.push("/dashboard")}>
         <ArrowLeft className="h-4 w-4" />
         Back to Dashboard
       </Button>
@@ -296,7 +296,7 @@ export default function CreateGiftCard() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-2 gradient-text">Create Gift Card</h1>
         <p className="text-muted-foreground">Fill in the details below to create a new blockchain gift card.</p>
-      </div>
+      </div> */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
@@ -322,10 +322,10 @@ export default function CreateGiftCard() {
                   onChange={handleChange}
                 >
                   {tokens.map((token) => (
-                  <option key={token} value={token} className="bg-[#101339] text-white">
-                    {token}
-                  </option>
-                ))}
+                    <option key={token} value={token} className="bg-[#101339] text-white">
+                      {token}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -362,9 +362,8 @@ export default function CreateGiftCard() {
                 {cardDesigns.map((design, index) => (
                   <div
                     key={index}
-                    className={`border-2 rounded-md p-1 cursor-pointer transition-all ${
-                      selectedDesign === index ? "border-primary glow-border" : "border-muted hover:border-primary/50"
-                    }`}
+                    className={`border-2 rounded-md p-1 cursor-pointer transition-all ${selectedDesign === index ? "border-primary glow-border" : "border-muted hover:border-primary/50"
+                      }`}
                     onClick={() => setSelectedDesign(index)}
                   >
                     <div className="relative overflow-hidden rounded">
@@ -414,7 +413,7 @@ export default function CreateGiftCard() {
                 </div>
               </div>
               <div class
-              Name="p-4">
+                Name="p-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-muted-foreground">Expiry:</span>
                   <span className="font-mono text-sm address-tag">

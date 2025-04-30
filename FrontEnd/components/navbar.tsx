@@ -3,11 +3,12 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Gift, Menu, Zap } from "lucide-react"
+import { Copy, Gift, LogOut, Menu, Zap } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAccount, useDisconnect } from "wagmi"
 import WalletConnect from "./wallet-connect"
+import { toast } from "./ui/use-toast"
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -21,14 +22,16 @@ export default function Navbar() {
     setModal((prev) => !prev)
   }
 
+
   const isActive = (path: string) => pathname === path
 
   const navItems = [
     { name: "Home", path: "/" },
     { name: "Dashboard", path: "/dashboard" },
-    { name: "Create", path: "/create" },
-    { name: "Validate", path: "/validateGift" },
-    { name: "Reclaim", path: "/reclaimGift" },
+    { name: "Gift", path: "/gift" },
+    // { name: "Create", path: "/create" },
+    // { name: "Validate", path: "/validateGift" },
+    // { name: "Reclaim", path: "/reclaimGift" },
   ]
 
   return (
@@ -58,13 +61,25 @@ export default function Navbar() {
 
         <div className="flex items-center gap-4">
           {isConnected ? (
-            <Button onClick={() => disconnect()}>{`Disconnect Wallet ${address?.slice(0, 6)}...${address?.slice(-4)}`}</Button>
+            <div className=" relative cursor-pointer py-2 px-2 rounded-lg bg-red-500/60" onClick={() => setIsMenuOpen(prev => !prev)}>
+              <span className="text-white flex items-center whitespace-nowrap gap-2" >{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+              {isMenuOpen && (
+                <div className="flex flex-col gap-1 transition-all duration-300 absolute top-[45px] right-0 shadow-md py-4 rounded-md bg-white/30 border border-primary/20">
+                  {/* copy address button  */}
+                  <span className="py-2 px-6 hover:bg-[#289a67] cursor-pointer flex items-center gap-2 whitespace-nowrap" onClick={() => { navigator.clipboard.writeText(address || ""); toast({ title: "Address Copied", description: "Wallet Address Copied to clipboard" }) }}>{address?.slice(0, 6)}...{address?.slice(-4)}<Copy className="h-4 w-4 ml-2" /> </span>
+
+                  {/* disconnect button  */}
+                  <span className="py-2 px-6 hover:bg-[#9a2828] cursor-pointer flex items-center gap-2 whitespace-nowrap" onClick={() => disconnect()}><LogOut className="h-4 w-4 ml-2" />Disconnect</span>
+
+                  {/* <span className="py-2 px-2 bg-[#289a67] whitespace-nowrap" onClick={() => disconnect()}>Disconnect Wallet</span> */}
+                </div>
+              )}
+            </div>
           ) : (
-            <Button asChild className="hidden md:flex glow-border cursor-pointer" onClick={() => setModal(true)} >
-              <div>
-                <Zap className="h-4 w-4 mr-2" />
-                Connect Wallet
-              </div>
+            <Button asChild className="hidden md:flex glow-border cursor-pointer" onClick={() => handleModal()} >
+
+              Connect Wallet
+
             </Button>
           )}
 
