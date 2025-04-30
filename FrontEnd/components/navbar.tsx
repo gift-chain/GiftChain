@@ -70,17 +70,16 @@ export default function Navbar() {
 
                   {/* disconnect button  */}
                   <span className="py-2 px-6 hover:bg-[#9a2828] cursor-pointer flex items-center gap-2 whitespace-nowrap" onClick={() => disconnect()}><LogOut className="h-4 w-4 ml-2" />Disconnect</span>
-
-                  {/* <span className="py-2 px-2 bg-[#289a67] whitespace-nowrap" onClick={() => disconnect()}>Disconnect Wallet</span> */}
                 </div>
               )}
             </div>
           ) : (
-            <Button asChild className="hidden md:flex glow-border cursor-pointer" onClick={() => handleModal()} >
+            // <Button asChild className="md:flex glow-border cursor-pointer" onClick={() => handleModal()} >
+            //   Connect Wallet
+            //   </Button>
+            <button className="md:flex glow-border cursor-pointer" onClick={() => handleModal()}>Connect Wallet
 
-              Connect Wallet
-
-            </Button>
+            </button>
           )}
 
           {/* <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
