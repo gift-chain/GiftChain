@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -21,6 +20,10 @@ import {
   BarChart3,
   PieChart,
   LineChart,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import WalletConnect from "@/components/wallet-connect";
 import { Progress } from "@/components/ui/progress";
@@ -71,6 +74,69 @@ interface PieChartData {
   value: number;
 }
 
+// Pagination Component
+const Pagination = ({ 
+  totalItems, 
+  itemsPerPage, 
+  currentPage, 
+  onPageChange 
+}: { 
+  totalItems: number, 
+  itemsPerPage: number, 
+  currentPage: number, 
+  onPageChange: (page: number) => void 
+}) => {
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  
+  if (totalPages <= 1) return null;
+  
+  return (
+    <div className="flex items-center justify-center space-x-2 mt-6">
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={() => onPageChange(1)} 
+        disabled={currentPage === 1}
+        className="h-8 w-8 p-0 border glow-border"
+      >
+        <ChevronsLeft className="h-4 w-4" />
+      </Button>
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={() => onPageChange(currentPage - 1)} 
+        disabled={currentPage === 1}
+        className="h-8 w-8 p-0 border glow-border"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      
+      <span className="text-sm text-muted-foreground">
+        Page {currentPage} of {totalPages}
+      </span>
+      
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={() => onPageChange(currentPage + 1)} 
+        disabled={currentPage === totalPages}
+        className="h-8 w-8 p-0 border glow-border"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={() => onPageChange(totalPages)} 
+        disabled={currentPage === totalPages}
+        className="h-8 w-8 p-0 border glow-border"
+      >
+        <ChevronsRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const [isConnected, setIsConnected] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -96,6 +162,11 @@ export default function Dashboard() {
   const [pieChartData, setPieChartData] = useState<PieChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Pagination states
+  const [createdCurrentPage, setCreatedCurrentPage] = useState(1);
+  const [receivedCurrentPage, setReceivedCurrentPage] = useState(1);
+  const [cardsPerPage, setCardsPerPage] = useState(6);
+
   // Debug counters
   const computeDataCount = useRef(0);
   const subgraphFetchCount = useRef({ created: 0, claimed: 0, reclaimed: 0 });
@@ -119,6 +190,17 @@ export default function Dashboard() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Paginated gift cards
+  const paginatedCreatedGiftCards = useMemo(() => {
+    const startIndex = (createdCurrentPage - 1) * cardsPerPage;
+    return createdGiftCards.slice(startIndex, startIndex + cardsPerPage);
+  }, [createdGiftCards, createdCurrentPage, cardsPerPage]);
+
+  const paginatedReceivedGiftCards = useMemo(() => {
+    const startIndex = (receivedCurrentPage - 1) * cardsPerPage;
+    return receivedGiftCards.slice(startIndex, startIndex + cardsPerPage);
+  }, [receivedGiftCards, receivedCurrentPage, cardsPerPage]);
 
   // Fetch token metadata
   const fetchTokenMetadata = useCallback(async (tokenAddress: string): Promise<{ symbol: string; decimals: number }> => {
@@ -501,6 +583,15 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, [computeData, userAddress, isConnected, giftsLoading, claimedLoading, reclaimedLoading]);
 
+  // Reset pagination when gift cards change
+  useEffect(() => {
+    setCreatedCurrentPage(1);
+  }, [createdGiftCards.length]);
+
+  useEffect(() => {
+    setReceivedCurrentPage(1);
+  }, [receivedGiftCards.length]);
+
   if (!mounted) return null;
 
   if (!isConnected) {
@@ -637,7 +728,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Analytics Section */}
+      {/* Analytics Section - Revamped Layout */}
       <div className="mb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold gradient-text">Analytics</h2>
@@ -652,8 +743,11 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card className="glass glow-card">
+        
+        {/* New Analytics Grid Layout */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* Activity Chart - Full width on mobile, 2 cols on desktop */}
+          <Card className="lg:col-span-2 glass glow-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Gift Card Activity</CardTitle>
@@ -662,64 +756,66 @@ export default function Dashboard() {
               <BarChart3 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent className="pl-2">
-              <div className="h-[200px] w-full">
+              <div className="h-[250px] w-full">
                 <AreaChart
                   data={areaChartData}
                   index="name"
                   categories={["total"]}
-                  colors={["#00ddeb", "#39ff14"]}
+                  colors={["#00ddeb"]}
                   valueFormatter={(value) => `$${value.toFixed(2)}`}
-                  className="h-[200px]"
+                  className="h-full"
                 />
               </div>
             </CardContent>
           </Card>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Card className="glass glow-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="gradient-text">Currency Distribution</CardTitle>
-                  <CardDescription>Gift cards by currency</CardDescription>
-                </div>
-                <PieChart className="h-4 w-4 text-primary" />
-              </CardHeader>
-            <CardContent>
-              <div className="h-[200px] w-full">
-                <BarChart
-                  data={barChartData}
-                  index="name"
-                  categories={["total"]}
-                  colors={["#00b7eb", "#ff69b4"]}
-                  valueFormatter={(value) => `${value} cards`}
-                  className="h-[200px]"
-                />
-              </div>
-            </CardContent>
-          </Card>
+
+          {/* Status Distribution - Full width on mobile, 1 col on desktop */}
           <Card className="glass glow-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="gradient-text">Gift Card Status</CardTitle>
-                <CardDescription>Status distribution</CardDescription>
+                <CardTitle className="gradient-text">Status Distribution</CardTitle>
+                <CardDescription>Current gift card statuses</CardDescription>
               </div>
-              <LineChart className="h-4 w-4 text-primary" />
+              <PieChart className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="h-[200px] w-full">
+              <div className="h-[250px] w-full">
                 <PieChartComponent
                   data={pieChartData}
                   index="name"
                   valueFormatter={(value) => `${value}`}
                   category="value"
                   colors={["#00ddeb", "#39ff14", "#ff00ff", "#00b7eb"]}
-                  className="h-[200px]"
+                  className="h-full"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Currency Distribution - Full width */}
+          <Card className="lg:col-span-3 glass glow-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="gradient-text">Currency Distribution</CardTitle>
+                <CardDescription>Gift cards by currency type</CardDescription>
+              </div>
+              <LineChart className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px] w-full">
+                <BarChart
+                  data={barChartData}
+                  index="name"
+                  categories={["total"]}
+                  colors={["#00b7eb"]}
+                  valueFormatter={(value) => `${value} cards`}
+                  className="h-full"
                 />
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
 
       {/* Calendar View */}
       <div className="mb-8">
@@ -732,6 +828,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {createdGiftCards
                 .filter((card) => card.status === "pending")
+                .slice(0, 3) // Show only 3 upcoming expirations
                 .map((card) => (
                   <div key={card.id} className="flex items-center gap-4 rounded-lg border p-3 glass glow-border">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
@@ -749,24 +846,26 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Gift Cards with Pagination */}
       <Tabs defaultValue="created" className="w-full">
         <TabsList className="mb-6 grid w-full grid-cols-2 bg-muted/50 p-1">
           <TabsTrigger
             value="created"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
-            Created Gift Cards
+            Created Gift Cards ({createdGiftCards.length})
           </TabsTrigger>
           <TabsTrigger
             value="received"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
-            Received Gift Cards
+            Received Gift Cards ({receivedGiftCards.length})
           </TabsTrigger>
         </TabsList>
+        
         <TabsContent value="created">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {createdGiftCards.map((card) => (
+            {paginatedCreatedGiftCards.map((card) => (
               <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
@@ -862,10 +961,19 @@ export default function Dashboard() {
               </Card>
             ))}
           </div>
+          
+          {/* Pagination for Created Gift Cards */}
+          <Pagination
+            totalItems={createdGiftCards.length}
+            itemsPerPage={cardsPerPage}
+            currentPage={createdCurrentPage}
+            onPageChange={setCreatedCurrentPage}
+          />
         </TabsContent>
+        
         <TabsContent value="received">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {receivedGiftCards.map((card) => (
+            {paginatedReceivedGiftCards.map((card) => (
               <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
@@ -953,6 +1061,14 @@ export default function Dashboard() {
               </Card>
             ))}
           </div>
+          
+          {/* Pagination for Received Gift Cards */}
+          <Pagination
+            totalItems={receivedGiftCards.length}
+            itemsPerPage={cardsPerPage}
+            currentPage={receivedCurrentPage}
+            onPageChange={setReceivedCurrentPage}
+          />
         </TabsContent>
       </Tabs>
     </div>
