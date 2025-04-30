@@ -308,7 +308,7 @@ export default function CreateGiftCard() {
                   id="amount"
                   type="number"
                   name="amount"
-                  value={form.amount}
+                  value={form.amount.trim()}
                   onChange={handleChange}
                   placeholder="Enter amount"
                   step="0.01"

@@ -242,7 +242,7 @@ export default function ValidateGiftCard() {
           Enter the gift code to check its details.
         </p>
       </div> */}
-         <Card className="bg-black/40 backdrop-blur-xl border border-primary/20 shadow-xl shadow-purple-900/5 overflow-hidden relative mb-8">
+      <Card className="bg-black/40 backdrop-blur-xl border border-primary/20 shadow-xl shadow-purple-900/5 overflow-hidden relative mb-8">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-blue-500/5 opacity-50"></div>
         <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-primary/5 to-transparent gift-shimmer"></div>
         <CardContent className="p-6 relative">
@@ -255,7 +255,7 @@ export default function ValidateGiftCard() {
                 type="text"
                 value={code}
                 onChange={(e) => {
-                  setCode(e.target.value);
+                  setCode(e.target.value.trim());
                   setValidationResult(null);
                   setErrors({ code: undefined });
                 }}
