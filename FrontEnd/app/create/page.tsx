@@ -128,7 +128,7 @@ export default function CreateGiftCard() {
   const tokenMap: Record<string, string> = {
     USDT: '0xb1B83B96402978F212af2415b1BffAad0D2aF1bb', // Sepolia USDT
     USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia USDC (replace with actual)
-    DAI: '0x68194a729C2450ad26072b3D33ADaCbcef39D574', // Sepolia DAI (replace with actual)
+    DAI: '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2', // Sepolia DAI (replace with actual)
   };
 
   // Token decimals map (assumes 6 for USDT/USDC/DAI)
@@ -244,7 +244,7 @@ export default function CreateGiftCard() {
       console.log("loading...", isLoading)
       console.log("form => ", form)
       const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
-      const response = await axios.post('http://localhost:3000/api/create-gift', {
+      const response = await axios.post('http://localhost:4000/api/create-gift', {
         token: tokenAddress,
         amount: form.amount,
         expiry: expiryTimestamp,
@@ -412,6 +412,7 @@ export default function CreateGiftCard() {
                   </div>
                 </div>
               </div>
+
               <div className="p-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-muted-foreground">Expiry:</span>
