@@ -24,13 +24,15 @@ import {
 } from "lucide-react";
 import WalletConnect from "@/components/wallet-connect";
 import Link from "next/link";
-import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from "../subgraph/useGiftQueries";
 import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
 import giftChainABI from "../abi/GiftChain.json";
+
+// Chart components (ensure these exist in your project)
+import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 
 // Replace with your actual contract address
 const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473";
@@ -369,7 +371,7 @@ export default function Dashboard() {
           return { hashedCode, giftID: response.data.giftID };
         } catch (error) {
           console.error(`Error fetching giftID for ${hashedCode}:`, error);
-          return { hashedCode, giftID: "N/A" };
+          return { hashedCode, giftID: "" }; // Use empty string instead of "N/A"
         }
       });
 
@@ -383,7 +385,7 @@ export default function Dashboard() {
     if (allGifts.length > 0 || claimedGifts.length > 0 || reclaimedGifts.length > 0) {
       fetchGiftIDs();
     }
-  }, [allGifts, claimedGifts, reclaimedGifts]);
+  }, [allGifts, claimedGifts, reclaimedGifts, giftIDs]);
 
   // Compute dashboard data
   const computeData = useCallback(async () => {
@@ -391,35 +393,39 @@ export default function Dashboard() {
       console.log("Skipping computeData: Subgraph still loading");
       return;
     }
-
+  
     computeDataCount.current += 1;
     console.log(`computeData run #${computeDataCount.current}`);
     setIsLoading(true);
-
+  
     try {
       // Initialize Sets for status checks
       const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
       const claimedGiftIds = new Set(claimedGifts.map((c) => c.gift.id.toLowerCase()));
       const currentDate = new Date();
-
+  
+      // Debug: Log claimedGifts and claimedGiftIds
+      console.log("claimedGifts:", claimedGifts);
+      console.log("claimedGiftIds:", Array.from(claimedGiftIds));
+  
       // Stats
       let totalGiftValue = 0;
       const totalCreated = allGifts.length;
       const totalReceived = claimedGifts.length;
       const claimedCount = claimedGifts.length;
       const claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
-
+  
       for (const gift of allGifts) {
         const { decimals } = await fetchTokenMetadata(gift.token);
         const amount = parseFloat(formatUnits(gift.amount, decimals));
         totalGiftValue += amount;
       }
-
+  
       // Stable growth percentages
       const createdGrowth = totalCreated > 0 ? ((totalCreated % 10) + 5).toString() : "0";
       const receivedGrowth = totalReceived > 0 ? ((totalReceived % 15) + 10).toString() : "0";
       const claimRateGrowth = claimRate > 0 ? ((claimRate % 5) + 3).toString() : "0";
-
+  
       setStats({
         totalCreated,
         totalReceived,
@@ -429,7 +435,7 @@ export default function Dashboard() {
         receivedGrowth,
         claimRateGrowth,
       });
-
+  
       // Created gift cards
       const newCreatedGiftCards: GiftCard[] = [];
       for (const gift of allGifts) {
@@ -437,22 +443,31 @@ export default function Dashboard() {
         const expiryDate = new Date(parseInt(gift.expiry) * 1000);
         const isExpired = expiryDate < currentDate;
         const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
-        const isClaimed = claimedGiftIds.has(gift.id.toLowerCase());
+        const isClaimed = claimedGiftIds.has(gift.id.toLowerCase()) || !!gift.claimed;
         const formattedAmount = parseFloat(formatUnits(gift.amount, decimals)).toFixed(2);
-
+  
+        // Debug: Log status checks for each gift
+        console.log(`Gift ${gift.id} status checks:`, {
+          isClaimed,
+          isReclaimed,
+          isExpired,
+          hasClaimedData: !!gift.claimed,
+          inClaimedGiftIds: claimedGiftIds.has(gift.id.toLowerCase()),
+        });
+  
         let status: string;
         if (isReclaimed) {
           status = "reclaimed";
         } else if (isClaimed) {
           status = "claimed";
-        } else if (isExpired) {
+        } else if (isExpired && !isClaimed) {
           status = "expired";
         } else {
           status = "pending";
         }
-
+  
         newCreatedGiftCards.push({
-          id: giftIDs[gift.id.toLowerCase()] || gift.id,
+          id: giftIDs[gift.id.toLowerCase()] || "",
           amount: `${formattedAmount} ${symbol}`,
           recipient: gift.claimed?.recipient
             ? `${gift.claimed.recipient.slice(0, 6)}...${gift.claimed.recipient.slice(-4)}`
@@ -466,20 +481,19 @@ export default function Dashboard() {
             : null,
           theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
         });
-        
       }
       console.log("Setting createdGiftCards:", newCreatedGiftCards);
       setCreatedGiftCards(newCreatedGiftCards);
-
+  
       // Received gift cards
       const newReceivedGiftCards: GiftCard[] = [];
       for (const claimed of claimedGifts) {
         const { symbol, decimals } = await fetchTokenMetadata(claimed.gift.token);
         const expiryDate = new Date(parseInt(claimed.gift.expiry) * 1000);
         const formattedAmount = parseFloat(formatUnits(claimed.amount, decimals)).toFixed(2);
-
+  
         newReceivedGiftCards.push({
-          id: giftIDs[claimed.gift.id.toLowerCase()] || claimed.gift.id,
+          id: giftIDs[claimed.gift.id.toLowerCase()] || "",
           amount: `${formattedAmount} ${symbol}`,
           recipient: userAddress,
           sender: "N/A",
@@ -494,7 +508,7 @@ export default function Dashboard() {
       }
       console.log("Setting receivedGiftCards:", newReceivedGiftCards);
       setReceivedGiftCards(newReceivedGiftCards);
-
+  
       // Area chart data
       const monthlyData: { [key: string]: number } = {};
       for (const gift of allGifts) {
@@ -523,7 +537,7 @@ export default function Dashboard() {
       }));
       console.log("Setting areaChartData:", newAreaChartData);
       setAreaChartData(newAreaChartData);
-
+  
       // Bar chart data
       const tokenCounts: { [key: string]: number } = {};
       for (const gift of allGifts) {
@@ -536,22 +550,22 @@ export default function Dashboard() {
       }));
       console.log("Setting barChartData:", newBarChartData);
       setBarChartData(newBarChartData);
-
-      // Pie chart data (Fixed for accuracy)
+  
+      // Pie chart data
       const statusCounts = {
         Claimed: 0,
         Pending: 0,
         Expired: 0,
         Reclaimed: 0,
       };
-
+  
       for (const gift of allGifts) {
         const giftId = gift.id.toLowerCase();
         const expiryDate = new Date(parseInt(gift.expiry) * 1000);
         const isExpired = expiryDate < currentDate;
-        const isClaimed = claimedGiftIds.has(giftId);
+        const isClaimed = claimedGiftIds.has(giftId) || !!gift.claimed;
         const isReclaimed = reclaimedGiftIds.has(giftId);
-
+  
         let status: string;
         if (isReclaimed) {
           statusCounts.Reclaimed += 1;
@@ -559,21 +573,21 @@ export default function Dashboard() {
         } else if (isClaimed) {
           statusCounts.Claimed += 1;
           status = "Claimed";
-        } else if (isExpired) {
+        } else if (isExpired && !isClaimed) {
           statusCounts.Expired += 1;
           status = "Expired";
         } else {
           statusCounts.Pending += 1;
           status = "Pending";
         }
-        console.log(`Gift ${giftId} status: ${status}`, {
+        console.log(`Pie chart - Gift ${giftId} status: ${status}`, {
           isClaimed,
           isReclaimed,
           isExpired,
-          giftStatus: gift.status,
+          hasClaimedData: !!gift.claimed,
         });
       }
-
+  
       const newPieChartData = Object.entries(statusCounts)
         .filter(([_, value]) => value > 0)
         .map(([name, value]) => ({
@@ -607,7 +621,6 @@ export default function Dashboard() {
       setIsLoading(false);
     }
   }, [allGifts, claimedGifts, reclaimedGifts, giftIDs, fetchTokenMetadata, giftsLoading, claimedLoading, reclaimedLoading]);
-
   // Run computeData with debounce
   useEffect(() => {
     if (!userAddress || !isConnected || giftsLoading || claimedLoading || reclaimedLoading) return;
@@ -703,14 +716,14 @@ export default function Dashboard() {
             </Link>
           </Button>
           <Button asChild variant="outline" className="border hover:bg-primary/10 glow-border">
-            <Link href="/gift-actions">Manage Gift Cards</Link>
+            <Link href="/gift">Manage Gift Cards</Link>
           </Button>
         </div>
       </div>
 
       {/* Overview Cards */}
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
+        <Card className="overflow-hidden glass glow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total Created</CardTitle>
             <Gift className="h-4 w-4 text-primary" />
@@ -723,7 +736,7 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
+        <Card className="overflow-hidden glass glow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total Received</CardTitle>
             <CreditCard className="h-4 w-4 text-primary" />
@@ -736,7 +749,7 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
+        <Card className="overflow-hidden glass glow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total Value</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
@@ -746,7 +759,7 @@ export default function Dashboard() {
             <div className="mt-1 flex items-center text-xs text-muted-foreground">≈ </div>
           </CardContent>
         </Card>
-        <Card className="overflow-hidden glass glow-card" style={{ display: "block", opacity: 1 }}>
+        <Card className="overflow-hidden glass glow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Claim Rate</CardTitle>
             <Users className="h-4 w-4 text-primary" />
@@ -777,7 +790,7 @@ export default function Dashboard() {
           </Select>
         </div>
         <div className="flex flex-col gap-4 md:flex-row md:gap-4">
-          <Card className="flex-1 glass glow-card" style={{ display: "block", opacity: 1, minHeight: "250px" }}>
+          <Card className="flex-1 glass glow-card" style={{ minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Gift Card Activity</CardTitle>
@@ -794,14 +807,14 @@ export default function Dashboard() {
                     index="name"
                     categories={["total"]}
                     colors={["#00ddeb"]}
-                    valueFormatter={(value) => `$${value.toFixed(2)}`}
+                    valueFormatter={(value: number) => `$${value.toFixed(2)}`}
                     className="h-full w-full"
                   />
                 </div>
               )}
             </CardContent>
           </Card>
-          <Card className="flex-1 glass glow-card" style={{ display: "block", opacity: 1, minHeight: "250px" }}>
+          <Card className="flex-1 glass glow-card" style={{ minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Currency Distribution</CardTitle>
@@ -818,14 +831,14 @@ export default function Dashboard() {
                     index="name"
                     categories={["total"]}
                     colors={["#00b7eb"]}
-                    valueFormatter={(value) => `${value} cards`}
+                    valueFormatter={(value: number) => `${value} cards`}
                     className="h-full w-full"
                   />
                 </div>
               )}
             </CardContent>
           </Card>
-          <Card className="flex-1 glass glow-card" style={{ display: "block", opacity: 1, minHeight: "250px" }}>
+          <Card className="flex-1 glass glow-card" style={{ minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Status Distribution</CardTitle>
@@ -842,7 +855,7 @@ export default function Dashboard() {
                     dataKey="value"
                     nameKey="name"
                     colors={["#39ff14", "#00ddeb", "#ff00ff", "#00b7eb"]} // Claimed, Pending, Expired, Reclaimed
-                    valueFormatter={(value) => `${value}`}
+                    valueFormatter={(value: number) => `${value}`}
                     className="h-full w-full"
                   />
                 </div>
@@ -854,18 +867,18 @@ export default function Dashboard() {
 
       {/* Calendar View */}
       <div className="mb-8">
-        <Card className="glass glow-card" style={{ display: "block", opacity: 1 }}>
+        <Card className="glass glow-card">
           <CardHeader>
             <CardTitle className="gradient-text">Upcoming Expirations</CardTitle>
             <CardDescription>Gift cards that will expire soon</CardDescription>
           </CardHeader>
           <CardContent>
-            {createdGiftCards.filter((card) => card.status === "pending").length === 0 ? (
+            {createdGiftCards.filter((card) => card.status === "pending" && card.id).length === 0 ? (
               <p className="text-center text-muted-foreground">No pending gift cards</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {createdGiftCards
-                  .filter((card) => card.status === "pending")
+                  .filter((card) => card.status === "pending" && card.id)
                   .slice(0, 3)
                   .map((card) => (
                     <div key={card.id} className="flex items-center gap-4 rounded-lg border p-3 glass glow-border">
@@ -908,35 +921,41 @@ export default function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paginatedCreatedGiftCards.map((card) => (
-                <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`} style={{ display: "block", opacity: 1 }}>
+                <Card key={card.id || card.createdDate} className={`overflow-hidden glass glow-card ${card.theme}`}>
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-primary">{card.amount}</CardTitle>
-                      {card.status === "claimed" && (
-                        <Badge className="bg-primary text-primary-foreground">
-                          <CheckCircle className="mr-1 h-3 w-3" /> Claimed
-                        </Badge>
-                      )}
-                      {card.status === "pending" && (
-                        <Badge variant="outline" className="border text-primary glow-border">
-                          <Clock className="mr-1 h-3 w-3" /> Pending
-                        </Badge>
-                      )}
-                      {card.status === "expired" && (
-                        <Badge variant="destructive" className="bg-red-500/80 border-red-500/50">
-                          <AlertCircle className="mr-1 h-3 w-3" /> Expired
-                        </Badge>
-                      )}
-                      {card.status === "reclaimed" && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-secondary/80 border-secondary/50 text-secondary-foreground"
-                        >
-                          <Gift className="mr-1 h-3 w-3" /> Reclaimed
-                        </Badge>
-                      )}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-primary">{card.amount}</CardTitle>
+                        <CardDescription className="text-muted-foreground">
+                          {card.id ? `Gift Card #${card.id}` : "Loading..."}
+                        </CardDescription>
+                      </div>
+                      <div className="flex justify-start">
+                        {card.status === "claimed" && (
+                          <Badge className="bg-primary text-primary-foreground">
+                            <CheckCircle className="mr-1 h-3 w-3" /> Claimed
+                          </Badge>
+                        )}
+                        {card.status === "pending" && (
+                          <Badge variant="outline" className="border text-primary glow-border">
+                            <Clock className="mr-1 h-3 w-3" /> Pending
+                          </Badge>
+                        )}
+                        {card.status === "expired" && (
+                          <Badge variant="destructive" className="bg-red-500/80 border-red-500/50">
+                            <AlertCircle className="mr-1 h-3 w-3" /> Expired
+                          </Badge>
+                        )}
+                        {card.status === "reclaimed" && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-secondary/80 border-secondary/50 text-secondary-foreground"
+                          >
+                            <Gift className="mr-1 h-3 w-3" /> Reclaimed
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <CardDescription className="text-muted-foreground">Gift Card #{card.id}</CardDescription>
                   </CardHeader>
                   <CardContent className="pb-2">
                     <div className="mb-4 space-y-2">
@@ -984,14 +1003,14 @@ export default function Dashboard() {
                         asChild
                         className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-border"
                       >
-                        <Link href={`/gift-actions?action=reclaim&id=${card.id}`}>
+                        <Link href={`/gift?tab=reclaim&id=${card.id}`}>
                           Reclaim <Gift className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
                     )}
                     {card.status === "pending" && (
                       <Button variant="outline" asChild className="w-full border hover:bg-primary/10 glow-border">
-                        <Link href={`/gift-actions?action=validate&id=${card.id}`}>Check Status</Link>
+                        <Link href={`/gift?tab=validate&id=${card.id}`}>Check Status</Link>
                       </Button>
                     )}
                     {(card.status === "claimed" || card.status === "reclaimed") && (
@@ -1018,22 +1037,28 @@ export default function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paginatedReceivedGiftCards.map((card) => (
-                <Card key={card.id} className={`overflow-hidden glass glow-card ${card.theme}`} style={{ display: "block", opacity: 1 }}>
+                <Card key={card.id || card.createdDate} className={`overflow-hidden glass glow-card ${card.theme}`}>
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-primary">{card.amount}</CardTitle>
-                      {card.status === "claimed" && (
-                        <Badge className="bg-primary text-primary-foreground">
-                          <CheckCircle className="mr-1 h-3 w-3" /> Claimed
-                        </Badge>
-                      )}
-                      {card.status === "pending" && (
-                        <Badge variant="outline" className="border text-primary glow-border">
-                          <Clock className="mr-1 h-3 w-3" /> Pending
-                        </Badge>
-                      )}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-primary">{card.amount}</CardTitle>
+                        <CardDescription className="text-muted-foreground">
+                          {card.id ? `Gift Card #${card.id}` : "Loading..."}
+                        </CardDescription>
+                      </div>
+                      <div className="flex justify-start">
+                        {card.status === "claimed" && (
+                          <Badge className="bg-primary text-primary-foreground">
+                            <CheckCircle className="mr-1 h-3 w-3" /> Claimed
+                          </Badge>
+                        )}
+                        {card.status === "pending" && (
+                          <Badge variant="outline" className="border text-primary glow-border">
+                            <Clock className="mr-1 h-3 w-3" /> Pending
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <CardDescription className="text-muted-foreground">Gift Card #{card.id}</CardDescription>
                   </CardHeader>
                   <CardContent className="pb-2">
                     <div className="mb-4 space-y-2">
@@ -1069,7 +1094,7 @@ export default function Dashboard() {
                         asChild
                         className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-border"
                       >
-                        <Link href={`/gift-actions?action=claim&id=${card.id}`}>
+                        <Link href={`/gift?tab=claim&id=${card.id}`}>
                           Claim Now <Gift className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
