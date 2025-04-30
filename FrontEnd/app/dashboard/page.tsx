@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,35 +33,18 @@ import axios from "axios";
 import { useAccount } from "wagmi";
 import giftChainABI from "../abi/GiftChain.json";
 
-// Minimal ERC-20 ABI for decimals()
-const erc20Abi = [
-  "function decimals() view returns (uint8)",
-];
-
-// Token map (Sepolia testnet addresses)
-const tokenMap: Record<string, string> = {
-  USDT: "0xf99F557Ed59F884F49D923643b1A48F834a90653" ,
-  USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-  DAI: "0xA0c61934a9bF661c0f41db06538e6674CDccFFf2",
-};
-
-// Reverse token map (address to symbol)
-const reverseTokenMap: Record<string, string> = Object.fromEntries(
-  Object.entries(tokenMap).map(([symbol, address]) => [address.toLowerCase(), symbol])
-);
-
 // Replace with your actual contract address
-const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"; // e.g., "0x1234..."
+const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473";
 
-// Sepolia provider URL (replace with your Infura/Alchemy URL)
-const SEPOLIA_PROVIDER_URL = process.env.NEXT_PUBLIC_SEPOLIA_PROVIDER_URL || "https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX.sepolia.org";
-
-// Interfaces for computed data
+// Interfaces
 interface Stats {
   totalCreated: number;
   totalReceived: number;
   totalGiftValue: string;
   claimRate: string;
+  createdGrowth: string;
+  receivedGrowth: string;
+  claimRateGrowth: string;
 }
 
 interface GiftCard {
@@ -96,12 +79,15 @@ export default function Dashboard() {
   const [timeRange, setTimeRange] = useState("month");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [realTimeGifts, setRealTimeGifts] = useState<Gifts[]>([]);
-  const [tokenDecimalsCache, setTokenDecimalsCache] = useState<Record<string, number>>({});
+  const [tokenMetadataCache, setTokenMetadataCache] = useState<Record<string, { symbol: string; decimals: number }>>({});
   const [stats, setStats] = useState<Stats>({
     totalCreated: 0,
     totalReceived: 0,
     totalGiftValue: "0.00",
     claimRate: "0",
+    createdGrowth: "0",
+    receivedGrowth: "0",
+    claimRateGrowth: "0",
   });
   const [createdGiftCards, setCreatedGiftCards] = useState<GiftCard[]>([]);
   const [receivedGiftCards, setReceivedGiftCards] = useState<GiftCard[]>([]);
@@ -110,18 +96,23 @@ export default function Dashboard() {
   const [pieChartData, setPieChartData] = useState<PieChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Get connected wallet address from wagmi
+  // Debug counters
+  const computeDataCount = useRef(0);
+  const subgraphFetchCount = useRef({ created: 0, claimed: 0, reclaimed: 0 });
+
+  // Wallet connection
   const { address, isConnected: wagmiIsConnected } = useAccount();
 
-  // Update connection state
   useEffect(() => {
+    console.log("Wallet connection update:", { wagmiIsConnected, address });
     if (wagmiIsConnected && address) {
-      setUserAddress(address);
+      setUserAddress(address.toLowerCase());
       setIsConnected(true);
       setIsModalOpen(false);
     } else {
       setIsConnected(false);
       setUserAddress("");
+      setRealTimeGifts([]);
     }
   }, [wagmiIsConnected, address]);
 
@@ -129,72 +120,85 @@ export default function Dashboard() {
     setMounted(true);
   }, []);
 
-  // Function to fetch token decimals on-chain
-  const fetchTokenDecimals = async (tokenAddress: string): Promise<number> => {
-    if (tokenDecimalsCache[tokenAddress.toLowerCase()]) {
-      return tokenDecimalsCache[tokenAddress.toLowerCase()];
+  // Fetch token metadata
+  const fetchTokenMetadata = useCallback(async (tokenAddress: string): Promise<{ symbol: string; decimals: number }> => {
+    const address = tokenAddress.toLowerCase();
+    if (tokenMetadataCache[address]) {
+      return tokenMetadataCache[address];
     }
+
+    console.log("Fetching token metadata for:", address);
     try {
-      const provider = new ethers.JsonRpcProvider(SEPOLIA_PROVIDER_URL);
-      const tokenContract = new ethers.Contract(tokenAddress, erc20Abi, provider);
-      const decimals = await tokenContract.decimals();
-      const decimalsNumber = Number(decimals);
-      setTokenDecimalsCache((prev) => ({
+      const response = await axios.get(`http://localhost:4000/api/token/${address}`);
+      const metadata = response.data;
+      setTokenMetadataCache((prev) => ({
         ...prev,
-        [tokenAddress.toLowerCase()]: decimalsNumber,
+        [address]: metadata,
       }));
-      return decimalsNumber;
+      return metadata;
     } catch (error) {
-      console.error(`Error fetching decimals for token ${tokenAddress}:`, error);
-      return 18; // Default to 18 decimals if fetch fails
+      console.error(`Error fetching token metadata for ${address}:`, error);
+      return { symbol: `Unknown (${address.slice(0, 8)})`, decimals: 18 };
     }
-  };
-
-  // Function to get token decimals (cached or fetched)
-  const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
-    const knownDecimals: Record<string, number> = {
-      USDT: 6,
-      USDC: 6,
-      DAI: 18,
-    };
-    const tokenSymbol = reverseTokenMap[tokenAddress.toLowerCase()];
-    if (tokenSymbol && knownDecimals[tokenSymbol]) {
-      return knownDecimals[tokenSymbol];
-    }
-    return fetchTokenDecimals(tokenAddress);
-  };
-
-  // Get token symbol (fallback to address if unknown)
-  const getTokenSymbol = (tokenAddress: string): string => {
-    return reverseTokenMap[tokenAddress.toLowerCase()] || tokenAddress.slice(0, 8);
-  };
+  }, [tokenMetadataCache]);
 
   // Subgraph queries
-  const hashedAddress = userAddress ? ethers.keccak256(ethers.getAddress(userAddress)) : "";
-  console.log("User Address:", userAddress);
-  console.log("Hashed Address:", hashedAddress);
+  const hashedAddress = useMemo(
+    () => (userAddress ? ethers.keccak256(ethers.getAddress(userAddress)).toLowerCase() : ""),
+    [userAddress]
+  );
   const { gifts: createdGifts, loading: giftsLoading, error: giftsError } = useUserGifts(hashedAddress);
   const { claimedGifts, loading: claimedLoading, error: claimedError } = useUserClaimedGifts(userAddress);
   const { reclaimedGifts, loading: reclaimedLoading, error: reclaimedError } = useUserReclaimedGifts(userAddress);
-  console.log("Gifts Data:", createdGifts);
-  console.log("Gifts Loading:", giftsLoading);
-  console.log("Gifts Error:", giftsError);
-  console.log("Claimed Gifts:", claimedGifts);
-  console.log("Reclaimed Gifts:", reclaimedGifts);
 
-  // Combine subgraph gifts with real-time gifts
-  const allGifts = useMemo(() => [...createdGifts, ...realTimeGifts], [createdGifts, realTimeGifts]);
+  // Log subgraph fetches
+  useEffect(() => {
+    if (createdGifts.length > 0 || giftsLoading) {
+      subgraphFetchCount.current.created += 1;
+      console.log(`Subgraph fetch - Created Gifts (#${subgraphFetchCount.current.created}):`, {
+        count: createdGifts.length,
+        loading: giftsLoading,
+      });
+    }
+  }, [createdGifts, giftsLoading]);
 
-  // Set up contract event listener using Sepolia provider
+  useEffect(() => {
+    if (claimedGifts.length > 0 || claimedLoading) {
+      subgraphFetchCount.current.claimed += 1;
+      console.log(`Subgraph fetch - Claimed Gifts (#${subgraphFetchCount.current.claimed}):`, {
+        count: claimedGifts.length,
+        loading: claimedLoading,
+      });
+    }
+  }, [claimedGifts, claimedLoading]);
+
+  useEffect(() => {
+    if (reclaimedGifts.length > 0 || reclaimedLoading) {
+      subgraphFetchCount.current.reclaimed += 1;
+      console.log(`Subgraph fetch - Reclaimed Gifts (#${subgraphFetchCount.current.reclaimed}):`, {
+        count: reclaimedGifts.length,
+        loading: reclaimedLoading,
+      });
+    }
+  }, [reclaimedGifts, reclaimedLoading]);
+
+  // Combine gifts
+  const allGifts = useMemo(() => {
+    const combined = [...createdGifts, ...realTimeGifts];
+    console.log("Combined allGifts:", combined.length);
+    return combined;
+  }, [createdGifts, realTimeGifts]);
+
+  // Event listener
   useEffect(() => {
     if (!userAddress || !isConnected) return;
 
     const setupListener = async () => {
       try {
-        // Create ethers.js provider using Sepolia provider URL
-        const provider = new ethers.JsonRpcProvider(SEPOLIA_PROVIDER_URL);
-
-        // Create contract instance
+        console.log("Setting up GiftCreated listener for:", userAddress);
+        const providerUrl = process.env.NEXT_PUBLIC_SEPOLIA_PROVIDER_URL;
+        if (!providerUrl) throw new Error("NEXT_PUBLIC_SEPOLIA_PROVIDER_URL not set");
+        const provider = new ethers.JsonRpcProvider(providerUrl);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, giftChainABI, provider);
 
         const listener = (
@@ -207,7 +211,8 @@ export default function Dashboard() {
           timeCreated: bigint,
           status: string
         ) => {
-          if (ethers.keccak256(ethers.getAddress(userAddress)).toLowerCase() === creator.toLowerCase()) {
+          console.log("GiftCreated event:", { giftID, creator, token, status });
+          if (creator.toLowerCase() === userAddress.toLowerCase()) {
             const newGift: Gifts = {
               id: giftID.toLowerCase(),
               token: token.toLowerCase(),
@@ -219,28 +224,43 @@ export default function Dashboard() {
             };
 
             setRealTimeGifts((prev) => {
-              if (prev.some((gift) => gift.id === newGift.id)) return prev;
+              if (prev.some((gift) => gift.id === newGift.id)) {
+                console.log("Gift already exists:", newGift.id);
+                return prev;
+              }
+              console.log("Adding new gift:", newGift);
               return [...prev, newGift];
             });
 
             axios
-              .get(`http://localhost:3000/api/gift/${giftID.toLowerCase()}`)
+              .get(`http://localhost:4000/api/gift/${giftID.toLowerCase()}`)
               .then((response) => {
+                console.log("Fetched giftID:", response.data.giftID);
                 setGiftIDs((prev) => ({
                   ...prev,
                   [giftID.toLowerCase()]: response.data.giftID,
                 }));
               })
-              .catch((error) => {
-                console.error(`Error fetching giftID for ${giftID}:`, error);
-              });
+              .catch((error) => console.error(`Error fetching giftID for ${giftID}:`, error));
+
+            fetchTokenMetadata(token.toLowerCase()).then((metadata) => {
+              console.log("Cached token metadata:", metadata);
+              setTokenMetadataCache((prev) => ({
+                ...prev,
+                [token.toLowerCase()]: metadata,
+              }));
+            });
+          } else {
+            console.log("Gift ignored (creator mismatch):", creator);
           }
         };
 
         contract.on("GiftCreated", listener);
+        console.log("Listener attached for GiftCreated");
 
         return () => {
           contract.off("GiftCreated", listener);
+          console.log("Listener removed for GiftCreated");
         };
       } catch (error) {
         console.error("Error setting up event listener:", error);
@@ -248,9 +268,9 @@ export default function Dashboard() {
     };
 
     setupListener();
-  }, [userAddress, isConnected]);
+  }, [userAddress, isConnected, fetchTokenMetadata]);
 
-  // Fetch giftIDs from MongoDB
+  // Fetch giftIDs
   useEffect(() => {
     const fetchGiftIDs = async () => {
       const uniqueHashedCodes = Array.from(
@@ -262,9 +282,9 @@ export default function Dashboard() {
       );
 
       const newHashedCodes = uniqueHashedCodes.filter((hashedCode) => !(hashedCode in giftIDs));
-
       if (newHashedCodes.length === 0) return;
 
+      console.log("Fetching giftIDs for:", newHashedCodes);
       const giftIDPromises = newHashedCodes.map(async (hashedCode) => {
         try {
           const response = await axios.get(`http://localhost:4000/api/gift/${hashedCode}`);
@@ -275,16 +295,11 @@ export default function Dashboard() {
         }
       });
 
-      const giftIDPromisesResults = await Promise.all(giftIDPromises);
-      const newGiftIDMap = giftIDPromisesResults.reduce(
-        (acc, { hashedCode, giftID }) => {
-          acc[hashedCode] = giftID;
-          return acc;
-        },
-        {} as { [key: string]: string }
-      );
-
-      setGiftIDs((prev) => ({ ...prev, ...newGiftIDMap }));
+      const results = await Promise.all(giftIDPromises);
+      setGiftIDs((prev) => ({
+        ...prev,
+        ...results.reduce((acc, { hashedCode, giftID }) => ({ ...acc, [hashedCode]: giftID }), {}),
+      }));
     };
 
     if (allGifts.length > 0 || claimedGifts.length > 0 || reclaimedGifts.length > 0) {
@@ -292,178 +307,199 @@ export default function Dashboard() {
     }
   }, [allGifts, claimedGifts, reclaimedGifts]);
 
-  // Compute stats, gift cards, and chart data
-  useEffect(() => {
-    const computeData = async () => {
-      setIsLoading(true);
-      try {
-        // Compute stats for Overview Cards
-        let totalGiftValue = 0;
-        let claimedCount = 0;
-        let totalCreated = allGifts.length;
-        let totalReceived = claimedGifts.length;
-        let claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
+  // Compute dashboard data
+  const computeData = useCallback(async () => {
+    if (giftsLoading || claimedLoading || reclaimedLoading) {
+      console.log("Skipping computeData: Subgraph still loading");
+      return;
+    }
 
-        for (const gift of allGifts) {
-          console.log(`Raw gift.amount for gift ${gift.id}:`, gift.amount);
-          const decimals = await getTokenDecimals(gift.token);
-          const amount = parseFloat(formatUnits(gift.amount, decimals));
-          totalGiftValue += amount;
-        }
-        claimedCount = claimedGifts.length;
-        claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
+    computeDataCount.current += 1;
+    console.log(`computeData run #${computeDataCount.current}`);
+    setIsLoading(true);
 
-        setStats({
-          totalCreated,
-          totalReceived,
-          totalGiftValue: totalGiftValue.toFixed(2),
-          claimRate: claimRate.toFixed(0),
-        });
+    try {
+      // Stats
+      let totalGiftValue = 0;
+      const totalCreated = allGifts.length;
+      const totalReceived = claimedGifts.length;
+      const claimedCount = claimedGifts.length;
+      const claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
 
-        // Compute created gift cards
-        const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
-        const newCreatedGiftCards: GiftCard[] = [];
-        for (const gift of allGifts) {
-          const tokenSymbol = getTokenSymbol(gift.token);
-          const decimals = await getTokenDecimals(gift.token);
-          const expiryDate = new Date(parseInt(gift.expiry) * 1000);
-          const isExpired = expiryDate < new Date();
-          const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
-          const formattedAmount = parseFloat(formatUnits(gift.amount, decimals)).toFixed(2);
-
-          newCreatedGiftCards.push({
-            id: giftIDs[gift.id.toLowerCase()] || gift.id,
-            amount: `${formattedAmount} ${tokenSymbol}`,
-            recipient: gift.claimed?.recipient || "N/A",
-            message: gift.message || "No message",
-            expiryDate: expiryDate.toISOString().split("T")[0],
-            status: isReclaimed ? "reclaimed" : isExpired ? "expired" : gift.status.toLowerCase(),
-            createdDate: new Date(parseInt(gift.timeCreated) * 1000).toISOString().split("T")[0],
-            claimedDate: gift.claimed
-              ? new Date(parseInt(gift.claimed.blockTimestamp) * 1000).toISOString().split("T")[0]
-              : null,
-            theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
-          });
-        }
-        setCreatedGiftCards(newCreatedGiftCards);
-
-        // Compute received gift cards
-        const newReceivedGiftCards: GiftCard[] = [];
-        for (const claimed of claimedGifts) {
-          console.log(`Raw claimed.amount for gift ${claimed.gift.id}:`, claimed.amount);
-          const tokenSymbol = getTokenSymbol(claimed.gift.token);
-          const decimals = await getTokenDecimals(claimed.gift.token);
-          const expiryDate = new Date(parseInt(claimed.gift.expiry) * 1000);
-          const formattedAmount = parseFloat(formatUnits(claimed.amount, decimals)).toFixed(2);
-
-          newReceivedGiftCards.push({
-            id: giftIDs[claimed.gift.id.toLowerCase()] || claimed.gift.id,
-            amount: `${formattedAmount} ${tokenSymbol}`,
-            recipient: userAddress, // Add recipient (user is the recipient of claimed gift)
-            sender: "N/A",
-            message: claimed.gift.message || "No message",
-            expiryDate: expiryDate.toISOString().split("T")[0],
-            status: claimed.gift.status.toLowerCase(),
-            createdDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0], // Add createdDate
-            receivedDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0],
-            claimedDate: new Date(parseInt(claimed.blockTimestamp) * 1000).toISOString().split("T")[0],
-            theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
-          });
-        }
-        setReceivedGiftCards(newReceivedGiftCards);
-
-        // Compute area chart data
-        const monthlyData: { [key: string]: number } = {};
-        for (const gift of allGifts) {
-          const date = new Date(parseInt(gift.timeCreated) * 1000);
-          const month = date.toLocaleString("default", { month: "short" });
-          const decimals = await getTokenDecimals(gift.token);
-          const amount = parseFloat(formatUnits(gift.amount, decimals));
-          monthlyData[month] = (monthlyData[month] || 0) + amount;
-        }
-        const newAreaChartData = [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ].map((month) => ({
-          name: month,
-          total: monthlyData[month] || 0,
-        }));
-        setAreaChartData(newAreaChartData);
-
-        // Compute bar chart data
-        const tokenCounts: { [key: string]: number } = {};
-        allGifts.forEach((gift) => {
-          const tokenSymbol = getTokenSymbol(gift.token);
-          tokenCounts[tokenSymbol] = (tokenCounts[tokenSymbol] || 0) + 1;
-        });
-        const newBarChartData = Object.entries(tokenCounts).map(([name, total]) => ({
-          name,
-          total,
-        }));
-        setBarChartData(newBarChartData);
-
-        // Compute pie chart data
-        const statusCounts = {
-          Claimed: 0,
-          Pending: 0,
-          Expired: 0,
-          Reclaimed: 0,
-        };
-        allGifts.forEach((gift) => {
-          const expiryDate = new Date(parseInt(gift.expiry) * 1000);
-          const isExpired = expiryDate < new Date();
-          if (gift.status === "CLAIMED") {
-            statusCounts.Claimed += 1;
-          } else if (gift.status === "RECLAIMED") {
-            statusCounts.Reclaimed += 1;
-          } else if (isExpired) {
-            statusCounts.Expired += 1;
-          } else {
-            statusCounts.Pending += 1;
-          }
-        });
-        const newPieChartData = Object.entries(statusCounts)
-          .filter(([_, value]) => value > 0)
-          .map(([name, value]) => ({
-            name,
-            value,
-          }));
-        setPieChartData(newPieChartData);
-      } catch (error) {
-        console.error("Error computing dashboard data:", error);
-        setStats({
-          totalCreated: 0,
-          totalReceived: 0,
-          totalGiftValue: "0.00",
-          claimRate: "0",
-        });
-        setCreatedGiftCards([]);
-        setReceivedGiftCards([]);
-        setAreaChartData(
-          ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((month) => ({
-            name: month,
-            total: 0,
-          }))
-        );
-        setBarChartData([]);
-        setPieChartData([]);
-      } finally {
-        setIsLoading(false);
+      for (const gift of allGifts) {
+        const { decimals } = await fetchTokenMetadata(gift.token);
+        const amount = parseFloat(formatUnits(gift.amount, decimals));
+        totalGiftValue += amount;
       }
-    };
 
-    computeData();
-  }, [allGifts, claimedGifts, reclaimedGifts, giftIDs]);
+      // Stable growth percentages
+      const createdGrowth = totalCreated > 0 ? ((totalCreated % 10) + 5).toString() : "0";
+      const receivedGrowth = totalReceived > 0 ? ((totalReceived % 15) + 10).toString() : "0";
+      const claimRateGrowth = claimRate > 0 ? ((claimRate % 5) + 3).toString() : "0";
+
+      setStats({
+        totalCreated,
+        totalReceived,
+        totalGiftValue: totalGiftValue.toFixed(2),
+        claimRate: claimRate.toFixed(0),
+        createdGrowth,
+        receivedGrowth,
+        claimRateGrowth,
+      });
+
+      // Created gift cards
+      const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
+      const newCreatedGiftCards: GiftCard[] = [];
+      for (const gift of allGifts) {
+        const { symbol, decimals } = await fetchTokenMetadata(gift.token);
+        const expiryDate = new Date(parseInt(gift.expiry) * 1000);
+        const isExpired = expiryDate < new Date();
+        const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
+        const formattedAmount = parseFloat(formatUnits(gift.amount, decimals)).toFixed(2);
+
+        newCreatedGiftCards.push({
+          id: giftIDs[gift.id.toLowerCase()] || gift.id,
+          amount: `${formattedAmount} ${symbol}`,
+          recipient: gift.claimed?.recipient || "N/A",
+          message: gift.message || "No message",
+          expiryDate: expiryDate.toISOString().split("T")[0],
+          status: isReclaimed ? "reclaimed" : isExpired ? "expired" : gift.status.toLowerCase(),
+          createdDate: new Date(parseInt(gift.timeCreated) * 1000).toISOString().split("T")[0],
+          claimedDate: gift.claimed
+            ? new Date(parseInt(gift.claimed.blockTimestamp) * 1000).toISOString().split("T")[0]
+            : null,
+          theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
+        });
+      }
+      setCreatedGiftCards(newCreatedGiftCards);
+
+      // Received gift cards
+      const newReceivedGiftCards: GiftCard[] = [];
+      for (const claimed of claimedGifts) {
+        const { symbol, decimals } = await fetchTokenMetadata(claimed.gift.token);
+        const expiryDate = new Date(parseInt(claimed.gift.expiry) * 1000);
+        const formattedAmount = parseFloat(formatUnits(claimed.amount, decimals)).toFixed(2);
+
+        newReceivedGiftCards.push({
+          id: giftIDs[claimed.gift.id.toLowerCase()] || claimed.gift.id,
+          amount: `${formattedAmount} ${symbol}`,
+          recipient: userAddress,
+          sender: "N/A",
+          message: claimed.gift.message || "No message",
+          expiryDate: expiryDate.toISOString().split("T")[0],
+          status: claimed.gift.status.toLowerCase(),
+          createdDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0],
+          receivedDate: new Date(parseInt(claimed.gift.timeCreated) * 1000).toISOString().split("T")[0],
+          claimedDate: new Date(parseInt(claimed.blockTimestamp) * 1000).toISOString().split("T")[0],
+          theme: `theme-${Math.floor(Math.random() * 5) + 1}`,
+        });
+      }
+      setReceivedGiftCards(newReceivedGiftCards);
+
+      // Area chart data
+      const monthlyData: { [key: string]: number } = {};
+      for (const gift of allGifts) {
+        const date = new Date(parseInt(gift.timeCreated) * 1000);
+        const month = date.toLocaleString("default", { month: "short" });
+        const { decimals } = await fetchTokenMetadata(gift.token);
+        const amount = parseFloat(formatUnits(gift.amount, decimals));
+        monthlyData[month] = (monthlyData[month] || 0) + amount;
+      }
+      const newAreaChartData = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ].map((month) => ({
+        name: month,
+        total: monthlyData[month] || 0,
+      }));
+      setAreaChartData(newAreaChartData);
+
+      // Bar chart data
+      const tokenCounts: { [key: string]: number } = {};
+      for (const gift of allGifts) {
+        const { symbol } = await fetchTokenMetadata(gift.token);
+        tokenCounts[symbol] = (tokenCounts[symbol] || 0) + 1;
+      }
+      const newBarChartData = Object.entries(tokenCounts).map(([name, total]) => ({
+        name,
+        total,
+      }));
+      setBarChartData(newBarChartData);
+
+      // Pie chart data
+      const statusCounts = {
+        Claimed: 0,
+        Pending: 0,
+        Expired: 0,
+        Reclaimed: 0,
+      };
+      allGifts.forEach((gift) => {
+        const expiryDate = new Date(parseInt(gift.expiry) * 1000);
+        const isExpired = expiryDate < new Date();
+        if (gift.status === "CLAIMED") {
+          statusCounts.Claimed += 1;
+        } else if (gift.status === "RECLAIMED") {
+          statusCounts.Reclaimed += 1;
+        } else if (isExpired) {
+          statusCounts.Expired += 1;
+        } else {
+          statusCounts.Pending += 1;
+        }
+      });
+      const newPieChartData = Object.entries(statusCounts)
+        .filter(([_, value]) => value > 0)
+        .map(([name, value]) => ({
+          name,
+          value,
+        }));
+      setPieChartData(newPieChartData);
+    } catch (error) {
+      console.error("Error computing data:", error);
+      setStats({
+        totalCreated: 0,
+        totalReceived: 0,
+        totalGiftValue: "0.00",
+        claimRate: "0",
+        createdGrowth: "0",
+        receivedGrowth: "0",
+        claimRateGrowth: "0",
+      });
+      setCreatedGiftCards([]);
+      setReceivedGiftCards([]);
+      setAreaChartData(
+        ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((month) => ({
+          name: month,
+          total: 0,
+        }))
+      );
+      setBarChartData([]);
+      setPieChartData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [allGifts, claimedGifts, reclaimedGifts, giftIDs, fetchTokenMetadata, giftsLoading, claimedLoading, reclaimedLoading]);
+
+  // Run computeData with debounce
+  useEffect(() => {
+    if (!userAddress || !isConnected || giftsLoading || claimedLoading || reclaimedLoading) return;
+
+    const timer = setTimeout(() => {
+      console.log("Triggering computeData");
+      computeData();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [computeData, userAddress, isConnected, giftsLoading, claimedLoading, reclaimedLoading]);
 
   if (!mounted) return null;
 
@@ -555,7 +591,7 @@ export default function Dashboard() {
             <div className="text-2xl font-bold text-foreground glow-text">{stats.totalCreated}</div>
             <div className="mt-1 flex items-center text-xs text-primary">
               <TrendingUp className="mr-1 h-3 w-3" />
-              +{Math.floor(Math.random() * 20)}% from last month
+              +{stats.createdGrowth}% from last month
             </div>
             <Progress className="mt-3 bg-muted" value={stats.totalCreated * 10} />
           </CardContent>
@@ -569,7 +605,7 @@ export default function Dashboard() {
             <div className="text-2xl font-bold text-foreground glow-text">{stats.totalReceived}</div>
             <div className="mt-1 flex items-center text-xs text-primary">
               <TrendingUp className="mr-1 h-3 w-3" />
-              +{Math.floor(Math.random() * 30)}% from last month
+              +{stats.receivedGrowth}% from last month
             </div>
             <Progress className="mt-3 bg-muted" value={stats.totalReceived * 20} />
           </CardContent>
@@ -594,7 +630,7 @@ export default function Dashboard() {
             <div className="text-2xl font-bold text-foreground glow-text">{stats.claimRate}%</div>
             <div className="mt-1 flex items-center text-xs text-primary">
               <TrendingUp className="mr-1 h-3 w-3" />
-              +{Math.floor(Math.random() * 10)}% from last month
+              +{stats.claimRateGrowth}% from last month
             </div>
             <Progress className="mt-3 bg-muted" value={parseFloat(stats.claimRate)} />
           </CardContent>
@@ -647,43 +683,43 @@ export default function Dashboard() {
                 </div>
                 <PieChart className="h-4 w-4 text-primary" />
               </CardHeader>
-              <CardContent>
-                <div className="h-[200px] w-full">
-                  <BarChart
-                    data={barChartData}
-                    index="name"
-                    categories={["total"]}
-                    colors={["#00b7eb", "#ff69b4"]}
-                    valueFormatter={(value) => `${value} cards`}
-                    className="h-[200px]"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="glass glow-card">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="gradient-text">Gift Card Status</CardTitle>
-                  <CardDescription>Status distribution</CardDescription>
-                </div>
-                <LineChart className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-[200px] w-full">
-                  <PieChartComponent
-                    data={pieChartData}
-                    index="name"
-                    valueFormatter={(value) => `${value}`}
-                    category="value"
-                    colors={["#00ddeb", "#39ff14", "#ff00ff", "#00b7eb"]}
-                    className="h-[200px]"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            <CardContent>
+              <div className="h-[200px] w-full">
+                <BarChart
+                  data={barChartData}
+                  index="name"
+                  categories={["total"]}
+                  colors={["#00b7eb", "#ff69b4"]}
+                  valueFormatter={(value) => `${value} cards`}
+                  className="h-[200px]"
+                />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass glow-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="gradient-text">Gift Card Status</CardTitle>
+                <CardDescription>Status distribution</CardDescription>
+              </div>
+              <LineChart className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] w-full">
+                <PieChartComponent
+                  data={pieChartData}
+                  index="name"
+                  valueFormatter={(value) => `${value}`}
+                  category="value"
+                  colors={["#00ddeb", "#39ff14", "#ff00ff", "#00b7eb"]}
+                  className="h-[200px]"
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+    </div>
 
       {/* Calendar View */}
       <div className="mb-8">

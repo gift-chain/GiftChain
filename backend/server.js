@@ -12,13 +12,14 @@ const { createGift } = require("./controllers/createGiftController.js");
 const app = express();
 
 mongoose.connect(process.env.MONGO_URI);
-const PORT = 3000;
+const PORT = 4000;
 
 
 app.use(cors());
 app.use(express.json());
 
 app.use("/api", codeRoutes);
+app.use("/api/token", require("./routes/token"));
 
 app.get("/", (req, res) => {
   res.json("GiftChain backend is live");
