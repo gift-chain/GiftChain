@@ -5,16 +5,25 @@ GiftChain is a decentralized application (dApp) that simplifies crypto gifting. 
 ---
 
 ## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Smart Contracts](#smart-contracts)
-- [Subgraph](#subgraph)
-- [Contributing](#contributing)
-- [License](#license)
+- [GiftChain](#giftchain)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Tech Stack](#tech-stack)
+    - [Frontend](#frontend)
+    - [Backend](#backend)
+    - [Smart Contracts](#smart-contracts)
+    - [Subgraph](#subgraph)
+  - [Project Structure](#project-structure)
+  - [Installation](#installation)
+    - [Prerequisites](#prerequisites)
+    - [Steps](#steps)
+    - [Usage](#usage)
+  - [Smart Contracts](#smart-contracts-1)
+    - [Overview](#overview-1)
+    - [Key Features](#key-features)
+  - [Subgraph](#subgraph-1)
+  - [Contributing](#contributing)
 
 ---
 
@@ -228,16 +237,9 @@ git push origin feature/your-feature-name
 
 5. Open a pull request
 
-# Gift Card Project
-
-This project allows users to create, claim, and reclaim gift cards using a blockchain-based system. Below is a flowchart illustrating the interaction flow.
-
-## Interaction Flow
-
-```mermaid
 graph TD
     A[User] -->|Connects Wallet| B[Frontend]
-    B -->|Create Gift| C{Check Allowance\n(USDT, USDC, DAI)}
+    B -->|Create Gift| C{Check Allowance}
     C -->|Sufficient Allowance| D[Backend]
     C -->|Insufficient Allowance| E[Approve Relayer]
     E --> D
