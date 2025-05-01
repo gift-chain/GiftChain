@@ -66,16 +66,16 @@ export default function PlatformStats() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4 gradient-text">Platform Statistics</h2>
           <p className="text-muted-foreground md:w-2/3 mx-auto">
-            Join thousands of users already creating and sharing blockchain gift cards on our platform.
+            Join thousands of users already creating and sharing blockchain gift on our platform.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard icon={<Gift className="h-6 w-6 text-primary" />} value={12458} label="Gift Cards Created" />
-          <StatCard icon={<Users className="h-6 w-6 text-primary" />} value={5723} label="Active Users" />
-          <StatCard icon={<Wallet className="h-6 w-6 text-primary" />} value={9845} label="Cards Claimed" />
+          <StatCard icon={<Gift className="h-6 w-6 text-white" />} value={12458} label="Gift Cards Created" />
+          <StatCard icon={<Users className="h-6 w-6 text-white" />} value={5723} label="Active Users" />
+          <StatCard icon={<Wallet className="h-6 w-6 text-white" />} value={9845} label="Cards Claimed" />
           <StatCard
-            icon={<TrendingUp className="h-6 w-6 text-primary" />}
+            icon={<TrendingUp className="h-6 w-6 text-white" />}
             value={2456}
             label="ETH Transferred"
             prefix=""
