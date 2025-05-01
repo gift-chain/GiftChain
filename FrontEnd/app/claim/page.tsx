@@ -315,7 +315,7 @@ export default function ClaimGiftCard() {
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-primary/5 to-transparent gift-shimmer"></div>
                 <CardContent className="p-6 relative">
                     <div className="mb-6 px-4 sm:px-0">
-                        <div className="glass p-4 rounded-lg border border-primary/30">
+                        <div className="glass p-4 rounded-lg border border-[#289a67]">
                             <label className="block text-xs sm:text-sm text-muted-foreground mb-2">Gift Code</label>
                             <input
                                 type="text"
@@ -325,7 +325,7 @@ export default function ClaimGiftCard() {
                                     setValidationResult(null)
                                     setErrors({ code: undefined })
                                 }}
-                                className="w-full bg-primary/10 text-white rounded-lg py-2 px-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-purple-500 border border-primary/30"
+                                className="w-full bg-primary/10 text-white rounded-lg py-2 px-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#289a67] border border-primary/30"
                                 placeholder="Enter gift code (e.g., c2f1-eb68-edd1-89ba)"
                             />
                         </div>

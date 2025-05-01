@@ -77,3 +77,10 @@ export const GET_USER_RECLAIMED_GIFTS = gql`
     }
   }
 `;
+export const GET_GIFTS = gql`
+  query GetGifts($creator: Bytes!) {
+    gift(where: { creator: $creator }) {
+      creator
+    }
+  }
+`;
