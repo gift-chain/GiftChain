@@ -37,12 +37,12 @@ export default function HeroSection() {
         </div>
 
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
-          Blockchain Gift Cards
+          Blockchain Gifts 
           <span className="text-primary glow-text"> Reimagined</span>
         </h1>
 
         <p className="text-xl text-muted-foreground max-w-[42rem] mb-8">
-          Create, send, and claim gift cards on the blockchain. A secure and modern way to share value with anyone,
+          Create, send, and claim gift on the blockchain. A secure and modern way to share value with anyone,
           anywhere.
         </p>
 

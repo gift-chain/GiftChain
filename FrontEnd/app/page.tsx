@@ -17,7 +17,7 @@ export default function Home() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4 gradient-text">How It Works</h2>
           <p className="text-muted-foreground md:w-2/3 mx-auto">
-            Send and receive gift cards on the blockchain with ease. Connect your wallet, create cards, and share them
+            Send and receive gift on the blockchain with ease. Connect your wallet, create cards, and share them
             with friends and family.
           </p>
         </div>

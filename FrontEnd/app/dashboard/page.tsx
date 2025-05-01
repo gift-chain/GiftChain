@@ -697,7 +697,7 @@ export default function Dashboard() {
     <div className="container px-4 py-8 hexagon-bg">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl gradient-text">
-          Your Gift Card Dashboard
+          Your Gift Dashboard
         </h1>
         <p className="mt-2 text-muted-foreground">Manage your created and received gift cards</p>
       </div>
@@ -711,9 +711,7 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2">
           <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 glow-border">
-            <Link href="/create">
-              Create New Gift Card <Gift className="ml-2 h-4 w-4" />
-            </Link>
+          
           </Button>
           <Button asChild variant="outline" className="border hover:bg-primary/10 glow-border">
             <Link href="/gift">Manage Gift Cards</Link>
@@ -926,8 +924,8 @@ export default function Dashboard() {
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-primary">{card.amount}</CardTitle>
-                        <CardDescription className="text-muted-foreground">
-                          {card.id ? `Gift Card #${card.id}` : "Loading..."}
+                        <CardDescription className="text-muted-foreground font-bold">
+                          {card.id ? `Gift ID ${card.id}` : "Loading..."}
                         </CardDescription>
                       </div>
                       <div className="flex justify-start">
