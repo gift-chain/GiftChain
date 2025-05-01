@@ -237,7 +237,7 @@ This project allows users to create, claim, and reclaim gift cards using a block
 ```mermaid
 graph TD
     A[User] -->|Connects Wallet| B[Frontend]
-    B -->|Create Gift| C{Check Allowance<br>(USDT, USDC, DAI)}
+    B -->|Create Gift| C{Check Allowance\n(USDT, USDC, DAI)}
     C -->|Sufficient Allowance| D[Backend]
     C -->|Insufficient Allowance| E[Approve Relayer]
     E --> D
