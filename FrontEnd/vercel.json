@@ -1,13 +1,6 @@
 {
-  "build": {
-    "env": {
-      "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
-    }
-  },
-    "rewrites": [
-        {
-          "source": "/(.*)",
-          "destination": "/"
-        }
-      ]
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "framework": "nextjs"
 }
