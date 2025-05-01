@@ -58,7 +58,7 @@ export default function Home() {
             </div>
             <Card className="overflow-hidden border-0 crypto-card glow-card">
               <CardContent className="p-0">
-                <img src="/placeholder.svg?height=400&width=600" alt="Dashboard preview" className="w-full h-auto" />
+                <img src="/card.jpg?height=400&width=600" alt="Dashboard preview" className="w-full h-auto" />
               </CardContent>
             </Card>
           </div>
@@ -71,11 +71,11 @@ export default function Home() {
           Connect your wallet now and start creating blockchain gift cards in seconds.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button size="lg" variant="default" className="glow-border">
+          {/* <Button size="lg" variant="default" className="glow-border">
             Connect Wallet
-          </Button>
+          </Button> */}
           <Button size="lg" variant="outline" asChild>
-            <Link href="/learn-more">Learn More</Link>
+            <Link href="/gift">Learn More</Link>
           </Button>
         </div>
       </section>

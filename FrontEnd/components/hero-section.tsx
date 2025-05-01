@@ -4,9 +4,14 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Gift, Wallet } from "lucide-react"
+import { motion } from 'framer-motion';
+import { useAccount } from "wagmi";
+
+const MotionGift = motion(Gift);
 
 export default function HeroSection() {
   const [isHovered, setIsHovered] = useState(false)
+  const { isConnected } = useAccount()
 
   return (
     <section className="relative pt-24 pb-12 md:pt-32 md:pb-24 mesh-bg overflow-hidden">
@@ -30,8 +35,20 @@ export default function HeroSection() {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <Gift
+            {/* <Gift
               className={`h-12 w-12 text-primary transition-transform duration-300 ${isHovered ? "scale-110" : "scale-100"}`}
+            /> */}
+            <MotionGift
+              className="h-12 w-12 text-primary"
+              // animate={{ scale: isHovered ? 1.1 : 1 }}
+              // transition={{ duration: 0.3, ease: 'easeInOut' }}
+              animate={{ y: [0, -10, 0] }} // up 10px, then back to 0
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            // style={{ width: '150px', height: 'auto' }}
             />
           </div>
         </div>
@@ -47,20 +64,33 @@ export default function HeroSection() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4">
+          {isConnected ? (<></>) : (
+            <>
+              <Button size="lg" variant="outline" className="border-primary/50 hover:border-primary" asChild>
+                <Link href="/gift">
+                  <Gift className="h-5 w-5 mr-2" />
+                  Create Gift Card
+                </Link>
+              </Button>
+
+              <Button size="lg" variant="outline" className="border-primary/50 hover:border-primary" asChild>
+                <Link href="/dashboard">
+                  <Gift className="h-5 w-5 mr-2" />
+                  Create Gift Card
+                </Link>
+              </Button>
+            </>
+          )}
           <Button size="lg" className="gap-2 glow-border" asChild>
             <Link href="/dashboard">
               <Wallet className="h-5 w-5" />
               Connect Wallet
             </Link>
           </Button>
-          <Button size="lg" variant="outline" className="border-primary/50 hover:border-primary" asChild>
-            <Link href="/create">
-              <Gift className="h-5 w-5 mr-2" />
-              Create Gift Card
-            </Link>
-          </Button>
+
         </div>
       </div>
     </section>
   )
+
 }

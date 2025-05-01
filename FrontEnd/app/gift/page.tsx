@@ -294,17 +294,17 @@ export default function GiftCard() {
             </Button>
 
             {/* switching button  */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+            <div className="grid place-content-center translate-x-20 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
 
                 <Button className={`${btn == "0" ? "bg-[#289a67]" : "bg-transparent border-2 border-[#289a67]"} hover:bg-[#289a67] shadow-lg gap-2`} size="default" onClick={() => setBtn("0")}>
                     <Zap className="h-5 w-5" />
                     Create
                 </Button>
 
-                <Button className={`${btn == "1" ? "bg-[#289a67]" : "bg-transparent border-2 border-[#289a67]"} hover:bg-[#289a67] shadow-lg gap-2`} size="default" onClick={() => setBtn("1")}>
+                {/* <Button className={`${btn == "1" ? "bg-[#289a67]" : "bg-transparent border-2 border-[#289a67]"} hover:bg-[#289a67] shadow-lg gap-2`} size="default" onClick={() => setBtn("1")}>
                     <Zap className="h-5 w-5" />
                     Validate
-                </Button>
+                </Button> */}
 
                 <Button className={`${btn == "2" ? "bg-[#289a67]" : "bg-transparent border-2 border-[#289a67]"} hover:bg-[#289a67] shadow-lg gap-2`} size="default" onClick={() => setBtn("2")}>
                     <Zap className="h-5 w-5" />
