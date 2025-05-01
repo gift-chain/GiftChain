@@ -240,7 +240,7 @@ git push origin feature/your-feature-name
 
 # GiftChain project workflow
 
-```Mermaid
+```mermaid
     graph TD
     A[User] -->|Connects Wallet| B[Frontend]
     B -->|Create Gift| C{Check Allowance}
