@@ -227,3 +227,28 @@ git push origin feature/your-feature-name
 ```
 
 5. Open a pull request
+
+# Gift Card Project
+
+This project allows users to create, claim, and reclaim gift cards using a blockchain-based system. Below is a flowchart illustrating the interaction flow.
+
+## Interaction Flow
+
+```mermaid
+graph TD
+    A[User] -->|Connects Wallet| B[Frontend]
+    B -->|Create Gift| C{Check Allowance<br>(USDT, USDC, DAI)}
+    C -->|Sufficient Allowance| D[Backend]
+    C -->|Insufficient Allowance| E[Approve Relayer]
+    E --> D
+    D -->|Calls createGift| F[Smart Contract]
+    F -->|Generates Raw Code| D
+    D -->|Sends Raw Code| B
+    F -->|Sends Gift Data| G[Subgraph]
+    G -->|Fetches Data| H[Dashboard in Frontend]
+    A -->|Reclaim Expired Gift| I[Call reclaim Function]
+    I --> F
+    A -->|Claim Gift with Code| J[Call claim Function]
+    J --> F
+    A -->|Validate Gift Code| K[Backend]
+    K -->|Checks Gift Status| F
