@@ -256,6 +256,6 @@ git push origin feature/your-feature-name
     I --> F
     A -->|Claim Gift with Code| J[Call claim Function]
     J --> F
-    A -->|Validate Gift Code| K[Backend]
+    A -->|Validate Gift Code| K[Call Validate Function]
     K -->|Checks Gift Status| F
 ```
