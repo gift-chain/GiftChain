@@ -24,6 +24,7 @@ GiftChain is a decentralized application (dApp) that simplifies crypto gifting. 
     - [Key Features](#key-features)
   - [Subgraph](#subgraph-1)
   - [Contributing](#contributing)
+- [GiftChain project workflow](#giftchain-project-workflow)
 
 ---
 
@@ -237,7 +238,10 @@ git push origin feature/your-feature-name
 
 5. Open a pull request
 
-graph TD
+# GiftChain project workflow
+
+```Mermaid
+    graph TD
     A[User] -->|Connects Wallet| B[Frontend]
     B -->|Create Gift| C{Check Allowance}
     C -->|Sufficient Allowance| D[Backend]
@@ -254,3 +258,4 @@ graph TD
     J --> F
     A -->|Validate Gift Code| K[Backend]
     K -->|Checks Gift Status| F
+```
