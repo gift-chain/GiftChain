@@ -29,7 +29,7 @@ import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from 
 import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
-import giftChainABI from "../abi/GiftChain.json";
+import giftChainABI from "../../abi/GiftChain.json";
 
 // Chart components (ensure these exist in your project)
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";

@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from "@/hooks/use-toast"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { ethers } from "ethers"
-import GiftChainABI from "../../app/abi/GiftChain.json"
-import erc20ABI from "../../app/abi/erc20ABI.json"
+import GiftChainABI from "../../abi/GiftChain.json"
+import erc20ABI from "../../abi/erc20ABI.json"
 import { useAccount, useWalletClient } from "wagmi"
 
 const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"
