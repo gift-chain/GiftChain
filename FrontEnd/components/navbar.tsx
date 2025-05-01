@@ -61,7 +61,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-4">
           {isConnected ? (
-            <div className=" relative cursor-pointer py-2 px-2 rounded-lg bg-red-500/60" onClick={() => setIsMenuOpen(prev => !prev)}>
+            <div className=" relative cursor-pointer py-2 px-3 rounded-lg bg-[#289a67]" onClick={() => setIsMenuOpen(prev => !prev)}>
               <span className="text-white flex items-center whitespace-nowrap gap-2" >{address?.slice(0, 6)}...{address?.slice(-4)}</span>
               {isMenuOpen && (
                 <div className="flex flex-col gap-1 transition-all duration-300 absolute top-[45px] right-0 shadow-md py-4 rounded-md bg-white/30 border border-primary/20">
@@ -74,12 +74,12 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            // <Button asChild className="md:flex glow-border cursor-pointer" onClick={() => handleModal()} >
-            //   Connect Wallet
-            //   </Button>
-            <button className="md:flex glow-border cursor-pointer" onClick={() => handleModal()}>Connect Wallet
+            <Button className="md:flex glow-border cursor-pointer" onClick={() => handleModal()} >
+              Connect Wallet
+            </Button>
+            // <button className="md:flex glow-border cursor-pointer" onClick={() => handleModal()}>Connect Wallet
 
-            </button>
+            // </button>
           )}
 
           {/* <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
