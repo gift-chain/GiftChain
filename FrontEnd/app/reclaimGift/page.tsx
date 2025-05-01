@@ -119,6 +119,7 @@ export default function ReclaimGift() {
       }
 
       const hashAddress = ethers.keccak256(ethers.toUtf8Bytes(address!))
+      console.log(giftsData?.gifts?.creator, hashAddress);
 
       if (currentTimestamp > gift.expiry && giftsData?.gifts?.creator === hashAddress) {
         const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
@@ -208,7 +209,7 @@ export default function ReclaimGift() {
         functionName: "reclaimGift",
         args: [codeHash],
       });
-      console.log(hash);
+      console.log(provider, signer, contract, hash);
 
       // toast({
       //   title: "Success",
