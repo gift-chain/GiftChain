@@ -77,50 +77,6 @@ export default function GiftCard() {
         "/placeholder.svg?height=200&width=320",
     ]
 
-    // const handleConnect = (address: string) => {
-    //   setIsConnected(true)
-    //   setWalletAddress(address)
-    // }
-
-    // const handleCreateGiftCard = async () => {
-    //   if (!amount) {
-    //     toast({
-    //       title: "Missing amount",
-    //       description: "Please enter an amount for the gift card",
-    //       variant: "destructive",
-    //     })
-    //     return
-    //   }
-
-    //   setIsCreating(true)
-
-    //   try {
-    //     // Simulate API call
-    //     await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    //     toast({
-    //       title: "Gift Card Created",
-    //       description: "Your gift card has been created successfully!",
-    //     })
-
-    //     router.push("/dashboard")
-    //   } catch (error) {
-    //     toast({
-    //       title: "Error",
-    //       description: "Failed to create gift card. Please try again.",
-    //       variant: "destructive",
-    //     })
-    //   } finally {
-    //     setIsCreating(false)
-    //   }
-    // }
-
-    // if (!isConnected) {
-    //   return <WalletConnect onConnect={handleConnect} />
-    // }
-
-    // const navigate = useNavigate();
-
     // Relayer address (from creategift.js)
     const RELAYER_ADDRESS = '0xA07139110776DF9621546441fc0a5417B8E945DF';
 
@@ -130,13 +86,6 @@ export default function GiftCard() {
         USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia USDC (replace with actual)
         DAI: '0x68194a729C2450ad26072b3D33ADaCbcef39D574', // Sepolia DAI (replace with actual)
     };
-
-    // Token decimals map (assumes 6 for USDT/USDC/DAI)
-    // const tokenDecimals: Record<string, number> = {
-    //   USDT: 18,
-    //   USDC: 6,
-    //   DAI: 18,
-    // };
 
     const tokens = Object.keys(tokenMap);
     const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm");
@@ -244,7 +193,7 @@ export default function GiftCard() {
             console.log("loading...", isLoading)
             console.log("form => ", form)
             const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
-            const response = await axios.post('http://localhost:3000/api/create-gift', {
+            const response = await axios.post('https://gift-chain-w3lp.vercel.app/api/create-gift', {
                 token: tokenAddress,
                 amount: form.amount,
                 expiry: expiryTimestamp,
@@ -278,13 +227,6 @@ export default function GiftCard() {
             setIsLoading(false);
         }
     };
-
-
-    // if(!isConnected) {
-    //   return <>
-    //   </>
-    // }
-
 
     return (
         <div className="container py-8 max-w-3xl hexagon-bg">
