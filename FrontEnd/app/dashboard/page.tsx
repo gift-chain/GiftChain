@@ -25,11 +25,11 @@ import {
 import WalletConnect from "@/components/wallet-connect";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from "../subgraph/useGiftQueries";
+import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from "../../hooks/subgraph/useGiftQueries";
 import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
-import giftChainABI from "../abi/GiftChain.json";
+import giftChainABI from "../../abi/GiftChain.json";
 
 // Chart components (ensure these exist in your project)
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
@@ -393,39 +393,39 @@ export default function Dashboard() {
       console.log("Skipping computeData: Subgraph still loading");
       return;
     }
-  
+
     computeDataCount.current += 1;
     console.log(`computeData run #${computeDataCount.current}`);
     setIsLoading(true);
-  
+
     try {
       // Initialize Sets for status checks
       const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
       const claimedGiftIds = new Set(claimedGifts.map((c) => c.gift.id.toLowerCase()));
       const currentDate = new Date();
-  
+
       // Debug: Log claimedGifts and claimedGiftIds
       console.log("claimedGifts:", claimedGifts);
       console.log("claimedGiftIds:", Array.from(claimedGiftIds));
-  
+
       // Stats
       let totalGiftValue = 0;
       const totalCreated = allGifts.length;
       const totalReceived = claimedGifts.length;
       const claimedCount = claimedGifts.length;
       const claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
-  
+
       for (const gift of allGifts) {
         const { decimals } = await fetchTokenMetadata(gift.token);
         const amount = parseFloat(formatUnits(gift.amount, decimals));
         totalGiftValue += amount;
       }
-  
+
       // Stable growth percentages
       const createdGrowth = totalCreated > 0 ? ((totalCreated % 10) + 5).toString() : "0";
       const receivedGrowth = totalReceived > 0 ? ((totalReceived % 15) + 10).toString() : "0";
       const claimRateGrowth = claimRate > 0 ? ((claimRate % 5) + 3).toString() : "0";
-  
+
       setStats({
         totalCreated,
         totalReceived,
@@ -435,7 +435,7 @@ export default function Dashboard() {
         receivedGrowth,
         claimRateGrowth,
       });
-  
+
       // Created gift cards
       const newCreatedGiftCards: GiftCard[] = [];
       for (const gift of allGifts) {
@@ -445,7 +445,7 @@ export default function Dashboard() {
         const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
         const isClaimed = claimedGiftIds.has(gift.id.toLowerCase()) || !!gift.claimed;
         const formattedAmount = parseFloat(formatUnits(gift.amount, decimals)).toFixed(2);
-  
+
         // Debug: Log status checks for each gift
         console.log(`Gift ${gift.id} status checks:`, {
           isClaimed,
@@ -454,7 +454,7 @@ export default function Dashboard() {
           hasClaimedData: !!gift.claimed,
           inClaimedGiftIds: claimedGiftIds.has(gift.id.toLowerCase()),
         });
-  
+
         let status: string;
         if (isReclaimed) {
           status = "reclaimed";
@@ -465,7 +465,7 @@ export default function Dashboard() {
         } else {
           status = "pending";
         }
-  
+
         newCreatedGiftCards.push({
           id: giftIDs[gift.id.toLowerCase()] || "",
           amount: `${formattedAmount} ${symbol}`,
@@ -484,14 +484,14 @@ export default function Dashboard() {
       }
       console.log("Setting createdGiftCards:", newCreatedGiftCards);
       setCreatedGiftCards(newCreatedGiftCards);
-  
+
       // Received gift cards
       const newReceivedGiftCards: GiftCard[] = [];
       for (const claimed of claimedGifts) {
         const { symbol, decimals } = await fetchTokenMetadata(claimed.gift.token);
         const expiryDate = new Date(parseInt(claimed.gift.expiry) * 1000);
         const formattedAmount = parseFloat(formatUnits(claimed.amount, decimals)).toFixed(2);
-  
+
         newReceivedGiftCards.push({
           id: giftIDs[claimed.gift.id.toLowerCase()] || "",
           amount: `${formattedAmount} ${symbol}`,
@@ -508,7 +508,7 @@ export default function Dashboard() {
       }
       console.log("Setting receivedGiftCards:", newReceivedGiftCards);
       setReceivedGiftCards(newReceivedGiftCards);
-  
+
       // Area chart data
       const monthlyData: { [key: string]: number } = {};
       for (const gift of allGifts) {
@@ -537,7 +537,7 @@ export default function Dashboard() {
       }));
       console.log("Setting areaChartData:", newAreaChartData);
       setAreaChartData(newAreaChartData);
-  
+
       // Bar chart data
       const tokenCounts: { [key: string]: number } = {};
       for (const gift of allGifts) {
@@ -550,7 +550,7 @@ export default function Dashboard() {
       }));
       console.log("Setting barChartData:", newBarChartData);
       setBarChartData(newBarChartData);
-  
+
       // Pie chart data
       const statusCounts = {
         Claimed: 0,
@@ -558,14 +558,14 @@ export default function Dashboard() {
         Expired: 0,
         Reclaimed: 0,
       };
-  
+
       for (const gift of allGifts) {
         const giftId = gift.id.toLowerCase();
         const expiryDate = new Date(parseInt(gift.expiry) * 1000);
         const isExpired = expiryDate < currentDate;
         const isClaimed = claimedGiftIds.has(giftId) || !!gift.claimed;
         const isReclaimed = reclaimedGiftIds.has(giftId);
-  
+
         let status: string;
         if (isReclaimed) {
           statusCounts.Reclaimed += 1;
@@ -587,7 +587,7 @@ export default function Dashboard() {
           hasClaimedData: !!gift.claimed,
         });
       }
-  
+
       const newPieChartData = Object.entries(statusCounts)
         .filter(([_, value]) => value > 0)
         .map(([name, value]) => ({

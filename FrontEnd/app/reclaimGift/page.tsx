@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from "@/hooks/use-toast"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { ethers } from "ethers"
-import GiftChainABI from "../../app/abi/GiftChain.json"
-import erc20ABI from "../../app/abi/erc20ABI.json"
+import GiftChainABI from "../../abi/GiftChain.json"
+import erc20ABI from "../../abi/erc20ABI.json"
 import { useAccount, useWalletClient } from "wagmi"
-import { GET_GIFTS } from "../subgraph/queries";
+import { GET_GIFTS } from "../../hooks/subgraph/queries";
 import { useQuery } from "@apollo/client"
 
 const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"
@@ -118,8 +118,9 @@ export default function ReclaimGift() {
         }
       }
 
-      const hashAddress = ethers.keccak256(ethers.toUtf8Bytes(address!))
-      console.log(giftsData?.gifts?.creator, hashAddress);
+      const hashAddress = ethers.keccak256(ethers.getAddress(address!))
+      const strinfiedGift = JSON.parse(JSON.stringify(giftsData))
+      console.log(giftsData, hashAddress, strinfiedGift);
 
       if (currentTimestamp > gift.expiry && giftsData?.gifts?.creator === hashAddress) {
         const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
@@ -209,7 +210,7 @@ export default function ReclaimGift() {
         functionName: "reclaimGift",
         args: [codeHash],
       });
-      console.log(provider, signer, contract, hash);
+      // console.log(provider, signer, contract, hash);
 
       // toast({
       //   title: "Success",
