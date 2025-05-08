@@ -43,14 +43,7 @@ declare global {
 }
 
 export default function CreateGiftCard() {
-  // const [isConnected, setIsConnected] = useState(false)
-  // const [walletAddress, setWalletAddress] = useState("")
-  // const [amount, setAmount] = useState("")
-  // const [currency, setCurrency] = useState("ETH")
-  // const [recipient, setRecipient] = useState("")
-  // const [message, setMessage] = useState("")
   const [selectedDesign, setSelectedDesign] = useState(0)
-  // const [isCreating, setIsCreating] = useState(false)
 
   const router = useRouter()
   const { toast } = useToast()
@@ -77,51 +70,6 @@ export default function CreateGiftCard() {
     "/placeholder.svg?height=200&width=320",
   ]
 
-  // const handleConnect = (address: string) => {
-  //   setIsConnected(true)
-  //   setWalletAddress(address)
-  // }
-
-  // const handleCreateGiftCard = async () => {
-  //   if (!amount) {
-  //     toast({
-  //       title: "Missing amount",
-  //       description: "Please enter an amount for the gift card",
-  //       variant: "destructive",
-  //     })
-  //     return
-  //   }
-
-  //   setIsCreating(true)
-
-  //   try {
-  //     // Simulate API call
-  //     await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  //     toast({
-  //       title: "Gift Card Created",
-  //       description: "Your gift card has been created successfully!",
-  //     })
-
-  //     router.push("/dashboard")
-  //   } catch (error) {
-  //     toast({
-  //       title: "Error",
-  //       description: "Failed to create gift card. Please try again.",
-  //       variant: "destructive",
-  //     })
-  //   } finally {
-  //     setIsCreating(false)
-  //   }
-  // }
-
-  // if (!isConnected) {
-  //   return <WalletConnect onConnect={handleConnect} />
-  // }
-
-  // const navigate = useNavigate();
-
-  // Relayer address (from creategift.js)
   const RELAYER_ADDRESS = '0xA07139110776DF9621546441fc0a5417B8E945DF';
 
   // Token map (Sepolia testnet addresses)
@@ -130,13 +78,6 @@ export default function CreateGiftCard() {
     USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia USDC (replace with actual)
     DAI: '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2', // Sepolia DAI (replace with actual)
   };
-
-  // Token decimals map (assumes 6 for USDT/USDC/DAI)
-  // const tokenDecimals: Record<string, number> = {
-  //   USDT: 18,
-  //   USDC: 6,
-  //   DAI: 18,
-  // };
 
   const tokens = Object.keys(tokenMap);
   const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm");
@@ -244,7 +185,7 @@ export default function CreateGiftCard() {
       console.log("loading...", isLoading)
       console.log("form => ", form)
       const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
-      const response = await axios.post('http://localhost:4000/api/create-gift', {
+      const response = await axios.post('https://gift-chain-w3lp.vercel.app/api/create-gift', {
         token: tokenAddress,
         amount: form.amount,
         expiry: expiryTimestamp,
@@ -280,24 +221,10 @@ export default function CreateGiftCard() {
   };
 
 
-  // if(!isConnected) {
-  //   return <>
-  //   </>
-  // }
-
 
   return (
     <div className="container py-8 max-w-3xl hexagon-bg">
-      {/* <Button variant="ghost" className="mb-6 gap-2" onClick={() => router.push("/dashboard")}>
-        <ArrowLeft className="h-4 w-4" />
-        Back to Dashboard
-      </Button>
-
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2 gradient-text">Create Gift Card</h1>
-        <p className="text-muted-foreground">Fill in the details below to create a new blockchain gift card.</p>
-      </div> */}
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <div className="space-y-6">

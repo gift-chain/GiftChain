@@ -209,7 +209,7 @@ export default function Dashboard() {
 
     console.log("Fetching token metadata for:", address);
     try {
-      const response = await axios.get(`http://localhost:4000/api/token/${address}`);
+      const response = await axios.get(`https://gift-chain-w3lp.vercel.app/api/token/${address}`);
       const metadata = response.data;
       setTokenMetadataCache((prev) => ({
         ...prev,
@@ -313,7 +313,7 @@ export default function Dashboard() {
             });
 
             axios
-              .get(`http://localhost:4000/api/gift/${giftID.toLowerCase()}`)
+              .get(`https://gift-chain-w3lp.vercel.app/api/gift/${giftID.toLowerCase()}`)
               .then((response) => {
                 console.log("Fetched giftID:", response.data.giftID);
                 setGiftIDs((prev) => ({
@@ -367,7 +367,7 @@ export default function Dashboard() {
       console.log("Fetching giftIDs for:", newHashedCodes);
       const giftIDPromises = newHashedCodes.map(async (hashedCode) => {
         try {
-          const response = await axios.get(`http://localhost:4000/api/gift/${hashedCode}`);
+          const response = await axios.get(`https://gift-chain-w3lp.vercel.app/api/gift/${hashedCode}`);
           return { hashedCode, giftID: response.data.giftID };
         } catch (error) {
           console.error(`Error fetching giftID for ${hashedCode}:`, error);
