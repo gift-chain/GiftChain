@@ -260,16 +260,16 @@ export default function GiftCard() {
 
             <div className="mb-8">
                 <h1 className="text-3xl font-bold tracking-tight mb-2 gradient-text">
-                    {btn == "0" && "Create Gift Card"}
-                    {btn == "1" && "Validate Gift Card"}
-                    {btn == "2" && "Claim Gift Card"}
-                    {btn == "3" && "Reclaim Expired Gift Card"}
+                    {btn == "0" && "Create Gift"}
+                    {btn == "1" && "Validate Gift"}
+                    {btn == "2" && "Claim Gift"}
+                    {btn == "3" && "Reclaim Expired Gift"}
                 </h1>
                 <p className="text-muted-foreground">
-                    {btn == "0" && "Fill in the details below to create a new blockchain gift card."}
-                    {btn == "1" && "Fill in your card details to valid your gift card."}
-                    {btn == "2" && "Fill in your card details to claim your gift card"}
-                    {btn == "3" && "Fill in your expired card details to reclain your gift card"}
+                    {btn == "0" && "Fill in the details below to create a new blockchain gift."}
+                    {btn == "1" && "Fill in your details to validate your gift."}
+                    {btn == "2" && "Fill in your details to claim your gift"}
+                    {btn == "3" && "Fill in your expired details to reclaim your gift"}
 
 
                 </p>

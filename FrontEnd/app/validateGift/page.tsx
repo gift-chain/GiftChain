@@ -72,14 +72,14 @@ export default function ValidateGiftCard() {
       if (gift.amount == 0) {
         return {
           isValid: false,
-          message: "Gift card not found. Please check your code.",
+          message: "Gift not found. Please check your code.",
         };
       }
 
       if (gift.status != 1) {
         return {
           isValid: false,
-          message: "This gift card has an invalid status.",
+          message: "This gift has an invalid status.",
         };
       }
 
@@ -88,14 +88,14 @@ export default function ValidateGiftCard() {
       if (currentTimestamp > gift.expiry) {
         return {
           isValid: false,
-          message: "This gift card has expired.",
+          message: "This gift has expired.",
         };
       }
 
       if (gift.claimed) {
         return {
           isValid: false,
-          message: "This gift card has already been claimed.",
+          message: "This gift has already been claimed.",
         };
       }
 
@@ -122,7 +122,7 @@ export default function ValidateGiftCard() {
 
       return {
         isValid: true,
-        message: "Gift card is valid!",
+        message: "Gift is valid!",
         details,
       };
     } catch (error: any) {
@@ -133,13 +133,13 @@ export default function ValidateGiftCard() {
         const reason = error.reason || error.data?.message;
         console.log("Error reason:", reason);
         if (reason.includes("GiftNotFound")) {
-          errorMessage = "Gift card not found. Please check your code.";
+          errorMessage = "Gift not found. Please check your code.";
         } else if (reason.includes("GiftAlreadyRedeemed")) {
-          errorMessage = "This gift card has already been redeemed.";
+          errorMessage = "This gift has already been redeemed.";
         } else if (reason.includes("GiftAlreadyReclaimed")) {
-          errorMessage = "This gift card has been reclaimed by the sender.";
+          errorMessage = "This gift has been reclaimed by the sender.";
         } else if (reason.includes("InvalidGiftStatus")) {
-          errorMessage = "This gift card is expired or has an invalid status.";
+          errorMessage = "This gift has expired or has an invalid status.";
         } else {
           errorMessage = `Contract error: ${reason}`;
         }
@@ -167,10 +167,10 @@ export default function ValidateGiftCard() {
 
   const handleCodeValidation = async () => {
     if (!code.trim() || code.length < 6) {
-      setErrors({ code: "Gift card code is required and must be at least 6 characters" });
+      setErrors({ code: "Gift code is required and must be at least 6 characters" });
       toast({
         title: "Error",
-        description: "Gift card code is required and must be at least 6 characters.",
+        description: "Gift code is required and must be at least 6 characters.",
         variant: "destructive",
       });
       return;
@@ -194,7 +194,7 @@ export default function ValidateGiftCard() {
         setErrors({ code: undefined });
         toast({
           title: "Success",
-          description: "Gift card validated successfully!",
+          description: "Gift validated successfully!",
         });
       }
     } catch (error: any) {
@@ -236,7 +236,7 @@ export default function ValidateGiftCard() {
       {/* Header */}
       {/* <div className="mb-6 sm:mb-8 text-center">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 gradient-text">
-          Validate Gift Card
+          Validate Gift
         </h1>
         <p className="text-muted-foreground text-sm sm:text-base">
           Enter the gift code to check its details.
@@ -274,7 +274,7 @@ export default function ValidateGiftCard() {
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Validate Gift Card
+                  Validate Gift
                 </>
               )}
             </Button>
@@ -296,7 +296,7 @@ export default function ValidateGiftCard() {
         </div>
       )}
 
-      {/* Modal for Gift Card Details */}
+      {/* Modal for Gift Details */}
       {validationResult && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="glass border border-primary/30 max-h-[80vh] overflow-y-auto">
@@ -305,7 +305,7 @@ export default function ValidateGiftCard() {
                 {validationResult.isValid ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
-                    Gift Card Details
+                    Gift Details
                   </>
                 ) : (
                   <>
@@ -328,7 +328,7 @@ export default function ValidateGiftCard() {
                       <div className="absolute inset-0 gift-card-bg gift-card-pattern"></div>
                       <img
                         src="/placeholder.svg?height=300&width=500"
-                        alt="Gift card"
+                        alt="Gift img"
                         className="w-full h-full object-cover relative z-10 opacity-80"
                       />
                       <div className="absolute inset-0 flex flex-col justify-between text-white p-4 sm:p-6 z-20">
@@ -431,7 +431,7 @@ export default function ValidateGiftCard() {
 
                 <div className="text-center text-xs sm:text-sm text-muted-foreground">
                   <p>
-                    This gift card{" "}
+                    This gift{" "}
                     {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
                     Expiry date is shown above.
                   </p>
