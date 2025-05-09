@@ -316,9 +316,9 @@ const createGift = async (req, res) => {
           creator, 
           relayer.address, 
           amountBN, 
-          // {
-          //   gasLimit,
-          // }
+          {
+            gasLimit,
+          }
         );
         console.log("Transfer transaction hash:", pullTx.hash);
         const receipt = await pullTx.wait();
@@ -420,9 +420,9 @@ const createGift = async (req, res) => {
           message, // _message
           hashedCode, // _giftID
           creatorHash, // _creator
-          // {
-          //   gasLimit: gasLimit,
-          // }
+          {
+            gasLimit: gasLimit,
+          }
         );
         console.log("Gift transaction hash:", giftTx.hash);
         const receipt = await giftTx.wait();
@@ -474,16 +474,16 @@ const createGift = async (req, res) => {
           }
         }
 
-        // Generate PNG
-        const downloadUrl = await generateGiftCardImage({
-          giftID: rawCode,
-          amount: ethers.formatUnits(amountBN, decimals),
-          token,
-          expiry,
-          message,
-          creator,
-          symbol,
-        });
+        // // Generate PNG
+        // const downloadUrl = await generateGiftCardImage({
+        //   giftID: rawCode,
+        //   amount: ethers.formatUnits(amountBN, decimals),
+        //   token,
+        //   expiry,
+        //   message,
+        //   creator,
+        //   symbol,
+        // });
 
         res.status(200).json({ 
           success: true, 
@@ -496,7 +496,7 @@ const createGift = async (req, res) => {
             expiry,
             message,
             creator,
-            downloadUrl,
+            // downloadUrl,
           },
         });
       } catch (err) {
