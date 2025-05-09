@@ -30,19 +30,19 @@ export default function GiftCardGrid({ cards, type, onReclaim }: GiftCardGridPro
     navigator.clipboard.writeText(text)
     toast({
       title: "Copied to clipboard",
-      description: "The gift card link has been copied to your clipboard.",
+      description: "The gift link has been copied to your clipboard.",
     })
   }
 
   if (cards.length === 0) {
     return (
       <div className="text-center py-12">
-        <h3 className="text-xl font-medium mb-2 gradient-text">No gift cards found</h3>
+        <h3 className="text-xl font-medium mb-2 gradient-text">No gift found</h3>
         <p className="text-muted-foreground mb-6">
-          {type === "created" ? "You haven't created any gift cards yet." : "You haven't claimed any gift cards yet."}
+          {type === "created" ? "You haven't created any gift yet." : "You haven't claimed any gift yet."}
         </p>
         <Button variant="outline" className="border-primary/50 hover:border-primary">
-          {type === "created" ? "Create Your First Gift Card" : "Claim a Gift Card"}
+          {type === "created" ? "Create Your First Gift" : "Claim a Gift"}
         </Button>
       </div>
     )
@@ -97,7 +97,7 @@ export default function GiftCardGrid({ cards, type, onReclaim }: GiftCardGridPro
               )}
 
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Card ID:</span>
+                <span className="text-muted-foreground">Gift ID:</span>
                 <span className="font-mono">#{card.id}</span>
               </div>
             </div>

@@ -92,7 +92,7 @@ export default function ReclaimGift() {
       if (gift.amount == 0) {
         return {
           isValid: false,
-          message: "Gift card not found. Please check your code.",
+          message: "Gift not found. Please check your code.",
         }
       }
 
@@ -107,7 +107,7 @@ export default function ReclaimGift() {
       if (currentTimestamp < gift.expiry) {
         return {
           isValid: false,
-          message: "This gift card has not expired.",
+          message: "This gift has not expired.",
         }
       }
 
@@ -142,7 +142,7 @@ export default function ReclaimGift() {
 
         return {
           isValid: true,
-          message: "Gift card is valid and ready to be claimed!",
+          message: "Gift is valid and ready to be claimed!",
           details,
         }
       }
@@ -159,13 +159,13 @@ export default function ReclaimGift() {
         const reason = error.reason || error.data?.message
         console.log("Error reason:", reason)
         if (reason.includes("GiftNotFound")) {
-          errorMessage = "Gift card not found. Please check your code."
+          errorMessage = "Gift not found. Please check your code."
         } else if (reason.includes("GiftAlreadyRedeemed")) {
-          errorMessage = "This gift card has already been redeemed."
+          errorMessage = "This gift has already been redeemed."
         } else if (reason.includes("GiftAlreadyReclaimed")) {
-          errorMessage = "This gift card has been reclaimed by the sender."
+          errorMessage = "This gift has been reclaimed by the sender."
         } else if (reason.includes("InvalidGiftStatus")) {
-          errorMessage = "This gift card is expired or has an invalid status."
+          errorMessage = "This gift is expired or has an invalid status."
         } else {
           errorMessage = `Contract error: ${reason}`
         }
@@ -193,7 +193,7 @@ export default function ReclaimGift() {
 
       // Check if window.ethereum exists
       if (!isConnected) {
-        throw new Error("MetaMask not detected. Please install MetaMask to claim your gift card.");
+        throw new Error("MetaMask not detected. Please install MetaMask to claim your gift.");
       }
 
       // Request account access first
@@ -214,7 +214,7 @@ export default function ReclaimGift() {
 
       // toast({
       //   title: "Success",
-      //   description: "Gift card claimed successfully!",
+      //   description: "Gift claimed successfully!",
       // });
       // Update UI
       setValidationResult({
@@ -228,7 +228,7 @@ export default function ReclaimGift() {
     } catch (error: any) {
       console.error("Claim error:", error);
 
-      let errorMessage = "Failed to claim gift card";
+      let errorMessage = "Failed to claim gift";
 
       if (error.code === 4001) {
         errorMessage = "Please connect your MetaMask wallet and approve the connection request";
@@ -258,10 +258,10 @@ export default function ReclaimGift() {
 
   const handleCodeValidation = async () => {
     if (!code.trim() || code.length < 6) {
-      setErrors({ code: "Gift card code is required and must be at least 6 characters" })
+      setErrors({ code: "Gift code is required and must be at least 6 characters" })
       toast({
         title: "Error",
-        description: "Gift card code is required and must be at least 6 characters.",
+        description: "Gift code is required and must be at least 6 characters.",
         variant: "destructive",
       })
       return
@@ -284,7 +284,7 @@ export default function ReclaimGift() {
         setErrors({ code: undefined })
         toast({
           title: "Success",
-          description: "Gift card validated successfully!",
+          description: "Gift validated successfully!",
         })
       }
     } catch (error: any) {
@@ -370,7 +370,7 @@ export default function ReclaimGift() {
                 {validationResult.isValid ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
-                    Gift Card Details
+                    Gift Details
                   </>
                 ) : (
                   <>
@@ -498,7 +498,7 @@ export default function ReclaimGift() {
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                        Reclaim Gift Card
+                        Reclaim Gift
                       </>
                     )}
                   </Button>
@@ -506,7 +506,7 @@ export default function ReclaimGift() {
 
                 <div className="text-center text-xs sm:text-sm text-muted-foreground">
                   <p>
-                    This gift card {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
+                    This gift {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
                     Expiry date is shown above.
                   </p>
                 </div>

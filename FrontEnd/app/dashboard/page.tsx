@@ -190,13 +190,13 @@ export default function Dashboard() {
   // Paginated gift cards
   const paginatedCreatedGiftCards = useMemo(() => {
     const startIndex = (createdCurrentPage - 1) * cardsPerPage;
-    console.log("Slicing createdGiftCards:", { startIndex, endIndex: startIndex + cardsPerPage, total: createdGiftCards.length });
+    console.log("Slicing createdGifts:", { startIndex, endIndex: startIndex + cardsPerPage, total: createdGiftCards.length });
     return createdGiftCards.slice(startIndex, startIndex + cardsPerPage);
   }, [createdGiftCards, createdCurrentPage, cardsPerPage]);
 
   const paginatedReceivedGiftCards = useMemo(() => {
     const startIndex = (receivedCurrentPage - 1) * cardsPerPage;
-    console.log("Slicing receivedGiftCards:", { startIndex, endIndex: startIndex + cardsPerPage, total: receivedGiftCards.length });
+    console.log("Slicing receivedGifts:", { startIndex, endIndex: startIndex + cardsPerPage, total: receivedGiftCards.length });
     return receivedGiftCards.slice(startIndex, startIndex + cardsPerPage);
   }, [receivedGiftCards, receivedCurrentPage, cardsPerPage]);
 
@@ -654,10 +654,10 @@ export default function Dashboard() {
           className="max-w-md"
         >
           <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl gradient-text">
-            Your Gift Card Dashboard
+            Your Gift Dashboard
           </h1>
           <p className="mt-4 text-muted-foreground">
-            Connect your wallet to view your created and received gift cards.
+            Connect your wallet to view your created and received gifts.
           </p>
           <div className="mt-8">
             <Button
@@ -697,9 +697,9 @@ export default function Dashboard() {
     <div className="container px-4 py-8 hexagon-bg">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl gradient-text">
-          Your Gift Card Dashboard
+          Your Gift Dashboard
         </h1>
-        <p className="mt-2 text-muted-foreground">Manage your created and received gift cards</p>
+        <p className="mt-2 text-muted-foreground">Manage your created and received gifts</p>
       </div>
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between glass rounded-lg border p-4">
@@ -712,11 +712,11 @@ export default function Dashboard() {
         <div className="flex gap-2">
           <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 glow-border">
             <Link href="/create">
-              Create New Gift Card <Gift className="ml-2 h-4 w-4" />
+              Create New Gift <Gift className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button asChild variant="outline" className="border hover:bg-primary/10 glow-border">
-            <Link href="/gift">Manage Gift Cards</Link>
+            <Link href="/gift">Manage Gifts</Link>
           </Button>
         </div>
       </div>
@@ -818,7 +818,7 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Currency Distribution</CardTitle>
-                <CardDescription>Gift cards by currency type</CardDescription>
+                <CardDescription>Gifts by currency type</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -842,7 +842,7 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Status Distribution</CardTitle>
-                <CardDescription>Current gift card statuses</CardDescription>
+                <CardDescription>Current gift statuses</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -870,11 +870,11 @@ export default function Dashboard() {
         <Card className="glass glow-card">
           <CardHeader>
             <CardTitle className="gradient-text">Upcoming Expirations</CardTitle>
-            <CardDescription>Gift cards that will expire soon</CardDescription>
+            <CardDescription>Gifts that will expire soon</CardDescription>
           </CardHeader>
           <CardContent>
             {createdGiftCards.filter((card) => card.status === "pending" && card.id).length === 0 ? (
-              <p className="text-center text-muted-foreground">No pending gift cards</p>
+              <p className="text-center text-muted-foreground">No pending gifts</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {createdGiftCards
@@ -905,19 +905,19 @@ export default function Dashboard() {
             value="created"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
-            Created Gift Cards ({createdGiftCards.length})
+            Created Gifts ({createdGiftCards.length})
           </TabsTrigger>
           <TabsTrigger
             value="received"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
-            Received Gift Cards ({receivedGiftCards.length})
+            Received Gifts ({receivedGiftCards.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="created">
           {paginatedCreatedGiftCards.length === 0 ? (
-            <p className="text-center text-muted-foreground">No created gift cards available.</p>
+            <p className="text-center text-muted-foreground">No created gifts available.</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paginatedCreatedGiftCards.map((card) => (
@@ -1033,7 +1033,7 @@ export default function Dashboard() {
 
         <TabsContent value="received">
           {paginatedReceivedGiftCards.length === 0 ? (
-            <p className="text-center text-muted-foreground">No received gift cards available.</p>
+            <p className="text-center text-muted-foreground">No received gifts available.</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paginatedReceivedGiftCards.map((card) => (

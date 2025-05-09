@@ -95,7 +95,7 @@ export default function CreateGiftCard() {
         abi: ERC20_ABI,
       }
 
-      console.log("Got here.")
+      // console.log("Got here.")
       // Get decimals
       // const decimals = tokenDecimals[form.token] || 6;
       // const decimals = await tokenContract.decimals();
@@ -109,28 +109,28 @@ export default function CreateGiftCard() {
 
       // Check allowance
       // const allowance = await tokenContract.allowance(address, RELAYER_ADDRESS);
-      const allowance = await publicClient.readContract({
-        address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        args: [signer.address, RELAYER_ADDRESS]
-      });
-      console.log("Allowance => ", allowance)
-      console.log("Got here..")
-      if (BigInt(allowance!.toString()) < BigInt(amountBN.toString())) {
-        setIsApproving(true);
+      // const allowance = await publicClient.readContract({
+      //   address: tokenAddress as `0x${string}`,
+      //   abi: ERC20_ABI,
+      //   functionName: "allowance",
+      //   args: [signer.address, RELAYER_ADDRESS]
+      // });
+      // console.log("Allowance => ", allowance)
+
+      // if (BigInt(allowance!.toString()) < BigInt(amountBN.toString())) {
+        // setIsApproving(true);
         // Approve the exact amount
         const hash = await walletClient.writeContract({
           address: tokenAddress as `0x${string}`,
           abi: ERC20_ABI,
           functionName: 'approve',
-          args: [RELAYER_ADDRESS as `0x${string}`, maxUint64],
+          args: [RELAYER_ADDRESS as `0x${string}`, amountBN],
         });
         console.log(hash)
-        setIsApproving(false);
+        // setIsApproving(false);
         return true;
-      }
-      return true;
+      // }
+      // return true;
     } catch (err: any) {
       setError(`Approval failed: ${err.message || 'Unknown error'}`);
       setIsApproving(false);
@@ -174,10 +174,10 @@ export default function CreateGiftCard() {
       // Check and approve tokens
       const tokenAddress = tokenMap[form.token];
       console.log(tokenAddress)
-      setCheckingAllowance(true)
+      setIsApproving(true)
       const isApproved = await checkAndApprove(tokenAddress, form.amount);
-      console.log("Got here...")
-      setCheckingAllowance(false)
+
+      setIsApproving(false)
       if (!isApproved) return;
 
       // Call backend
@@ -310,7 +310,7 @@ export default function CreateGiftCard() {
           <div className="mt-8">
             <Button className="w-full gap-2 glow-border" size="lg" onClick={handleSubmit} disabled={isLoading || isApproving || !address}>
               <Zap className="h-5 w-5" />
-              {checkingAllowance ? "Checking Allowance..." : isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
+              {isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
             </Button>
           </div>
 

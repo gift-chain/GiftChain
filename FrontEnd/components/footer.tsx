@@ -15,7 +15,7 @@ export default function Footer() {
               <span className="font-bold text-xl gradient-text">GiftChain</span>
             </Link>
             <p className="text-muted-foreground mb-4 max-w-md">
-              Create, send, and claim blockchain gift cards with ease. A secure and modern way to share value with
+              Create, send, and claim blockchain gift with ease. A secure and modern way to share value with
               anyone, anywhere.
             </p>
             <div className="flex gap-4">
@@ -50,12 +50,12 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/create" className="text-muted-foreground hover:text-primary transition-colors">
-                  Create Gift Card
+                  Create Gift
                 </Link>
               </li>
               <li>
                 <Link href="/claim" className="text-muted-foreground hover:text-primary transition-colors">
-                  Claim Gift Card
+                  Claim Gift
                 </Link>
               </li>
               <li>
