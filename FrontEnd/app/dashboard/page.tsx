@@ -30,12 +30,22 @@ import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
 import giftChainABI from "../../abi/GiftChain.json";
+import ERC20_ABI from "@/abi/ERC20_ABI.json";
 
 // Chart components (ensure these exist in your project)
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 
-// Replace with your actual contract address
+// Contract address
 const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473";
+
+// Stable coins address supported
+const USDT = '0xb1B83B96402978F212af2415b1BffAad0D2aF1bb'; // Sepolia USDT
+const USDC = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'; // Sepolia USDC
+const DAI = '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2'; // Sepolia DAI
+const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/uoHUh-NxGIzghN1job_SDZjGuQQ7snrT"
+
+// const provider = new ethers.JsonRpcProvider(PROVIDER_URL)
+
 
 // Interfaces
 interface Stats {
@@ -166,9 +176,78 @@ export default function Dashboard() {
   // Debug counters
   const computeDataCount = useRef(0);
   const subgraphFetchCount = useRef({ created: 0, claimed: 0, reclaimed: 0 });
+  const [tokenBalances, setTokenBalances] = useState({
+    USDT: { raw: BigInt(0), formatted: "0" },
+    USDC: { raw: BigInt(0), formatted: "0" },
+    DAI: { raw: BigInt(0), formatted: "0" }
+  });
+  // const [tokenBalances, setTokenBalances] = useState({
+  //   USDT: BigInt(0),
+  //   USDC: BigInt(0),
+  //   DAI: BigInt(0)
+  // });
 
   // Wallet connection
   const { address, isConnected: wagmiIsConnected } = useAccount();
+
+  useEffect(() => {
+    const fetchTokenBalances = async () => {
+      if (!userAddress || !isConnected) return;
+  
+      try {
+        const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
+        
+        const USDTContract = new ethers.Contract(USDT, ERC20_ABI, provider);
+        const USDCContract = new ethers.Contract(USDC, ERC20_ABI, provider);
+        const DAIContract = new ethers.Contract(DAI, ERC20_ABI, provider);
+  
+        const [
+          USDTBalance, USDTDecimal,
+          USDCBalance, USDCDecimal,
+          DAIBalance, DAIDecimal
+        ] = await Promise.all([
+          USDTContract.balanceOf(userAddress),
+          USDTContract.decimals(),
+          USDCContract.balanceOf(userAddress),
+          USDCContract.decimals(),
+          DAIContract.balanceOf(userAddress),
+          DAIContract.decimals()
+        ]);
+
+        console.log("USDT Decimal => ", USDTDecimal)
+        console.log("USDT Decimal String => ", USDTDecimal.toString())
+  
+        // setTokenBalances({
+        //   USDT: ethers.parseUnits(USDTBalance.toString(), USDTDecimal.toString()),
+        //   USDC: ethers.parseUnits(USDCBalance.toString(), USDCDecimal),
+        //   DAI: ethers.parseUnits(DAIBalance.toString(), DAIDecimal)
+        // });
+        setTokenBalances({
+          USDT: {
+            raw: USDTBalance,
+            formatted: ethers.formatUnits(USDTBalance, USDTDecimal)
+          },
+          USDC: {
+            raw: USDCBalance,
+            formatted: ethers.formatUnits(USDCBalance, USDCDecimal)
+          },
+          DAI: {
+            raw: DAIBalance,
+            formatted: ethers.formatUnits(DAIBalance, DAIDecimal)
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching token balances:', error);
+      }
+    };
+  
+    fetchTokenBalances();
+    
+    // Set up an interval to refresh balances
+    const intervalId = setInterval(fetchTokenBalances, 30000); // Refresh every 30 seconds
+  
+    return () => clearInterval(intervalId);
+  }, [userAddress, isConnected]);
 
   useEffect(() => {
     console.log("Wallet connection update:", { wagmiIsConnected, address });
@@ -353,6 +432,7 @@ export default function Dashboard() {
   // Fetch giftIDs
   useEffect(() => {
     const fetchGiftIDs = async () => {
+
       const uniqueHashedCodes = Array.from(
         new Set([
           ...allGifts.map((gift) => gift.id.toLowerCase()),
@@ -704,9 +784,15 @@ export default function Dashboard() {
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between glass rounded-lg border p-4">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="px-3 py-1 border glow-border text-foreground">
-            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> Connected: {userAddress.slice(0, 6)}...
-            {userAddress.slice(-4)}
+          <p>Token Balance</p>
+          <Badge variant="outline" className="px-3 py-3 border glow-border text-foreground">
+            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> {tokenBalances.USDT.formatted} USDT
+          </Badge>
+          <Badge variant="outline" className="px-3 py-3 border glow-border text-foreground">
+            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> {tokenBalances.USDC.formatted} USDC
+          </Badge>
+          <Badge variant="outline" className="px-3 py-3 border glow-border text-foreground">
+            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> {tokenBalances.DAI.formatted} DAI
           </Badge>
         </div>
         <div className="flex gap-2">
@@ -927,7 +1013,7 @@ export default function Dashboard() {
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-primary">{card.amount}</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          {card.id ? `Gift Card #${card.id}` : "Loading..."}
+                          {card.id ? `Gift-ID ${card.id}` : "Loading..."}
                         </CardDescription>
                       </div>
                       <div className="flex justify-start">
