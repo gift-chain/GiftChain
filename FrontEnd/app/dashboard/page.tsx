@@ -39,8 +39,8 @@ import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components
 const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473";
 
 // Stable coins address supported
-const USDT = '0xb1B83B96402978F212af2415b1BffAad0D2aF1bb'; // Sepolia USDT
-const USDC = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'; // Sepolia USDC
+const USDT = '0x7A8532Bd4067cD5C9834cD0eCcb8e71088c9fbf8'; // Sepolia USDT
+const USDC = '0x437011e4f16a4Be60Fe01aD6678dBFf81AEbaEd4'; // Sepolia USDC
 const DAI = '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2'; // Sepolia DAI
 const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/uoHUh-NxGIzghN1job_SDZjGuQQ7snrT"
 
@@ -167,6 +167,9 @@ export default function Dashboard() {
   const [barChartData, setBarChartData] = useState<ChartData[]>([]);
   const [pieChartData, setPieChartData] = useState<PieChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const {refetchCreatedGifts} = useUserGifts(userAddress);
+  const {refetchClaimedGifts} = useUserClaimedGifts(userAddress);
+  const {refetchReclaimedGifts} = useUserReclaimedGifts(userAddress);
 
   // Pagination states
   const [createdCurrentPage, setCreatedCurrentPage] = useState(1);
@@ -262,9 +265,36 @@ export default function Dashboard() {
     }
   }, [wagmiIsConnected, address]);
 
+  // Add a refresh function
+  const refreshDashboard = useCallback(async () => {
+    try {
+      await Promise.all([
+        refetchCreatedGifts(),
+        refetchClaimedGifts(),
+        refetchReclaimedGifts()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+    }
+  }, [refetchCreatedGifts, refetchClaimedGifts, refetchReclaimedGifts]);
+
+
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Refresh on mount
+    refreshDashboard();
+    
+    // Refresh when window gets focus
+    const handleFocus = () => {
+      refreshDashboard();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshDashboard]);
 
   // Paginated gift cards
   const paginatedCreatedGiftCards = useMemo(() => {
@@ -1013,7 +1043,7 @@ export default function Dashboard() {
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-primary">{card.amount}</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          {card.id ? `Gift-ID ${card.id}` : "Loading..."}
+                          Gift Code {card.id ? <span className="font-bold"> {card.id} </span> : "Loading..."}
                         </CardDescription>
                       </div>
                       <div className="flex justify-start">
