@@ -71,9 +71,9 @@ export default function PlatformStats() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard icon={<Gift className="h-6 w-6 text-white" />} value={12458} label="Gift Cards Created" />
+          <StatCard icon={<Gift className="h-6 w-6 text-white" />} value={12458} label="Gift Created" />
           <StatCard icon={<Users className="h-6 w-6 text-white" />} value={5723} label="Active Users" />
-          <StatCard icon={<Wallet className="h-6 w-6 text-white" />} value={9845} label="Cards Claimed" />
+          <StatCard icon={<Wallet className="h-6 w-6 text-white" />} value={9845} label="Gifts Claimed" />
           <StatCard
             icon={<TrendingUp className="h-6 w-6 text-white" />}
             value={2456}

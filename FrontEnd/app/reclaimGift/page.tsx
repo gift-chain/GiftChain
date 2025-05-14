@@ -54,6 +54,7 @@ export default function ReclaimGift() {
   const { data: giftsData, loading: giftsLoading } = useQuery(GET_GIFTS, {
     variables: { creator: address?.toLowerCase() },
     skip: !address, // Skip query if no address
+    fetchPolicy: "network-only",
   })
 
   // Initialize provider and contract on component mount
@@ -95,7 +96,6 @@ export default function ReclaimGift() {
           message: "Gift not found. Please check your code.",
         }
       }
-
       const block = await provider.getBlock("latest")
       if (!block) {
         return {
@@ -107,7 +107,7 @@ export default function ReclaimGift() {
       if (currentTimestamp < gift.expiry) {
         return {
           isValid: false,
-          message: "This gift has not expired.",
+          message: "This gift has not expired. You cannot reclaim it yet.",
         }
       }
 
@@ -119,38 +119,40 @@ export default function ReclaimGift() {
       }
 
       const hashAddress = ethers.keccak256(ethers.getAddress(address!))
-      const strinfiedGift = JSON.parse(JSON.stringify(giftsData))
-      console.log(giftsData, hashAddress, strinfiedGift);
+      // const strinfiedGift = JSON.parse(JSON.stringify(giftsData))
+      // console.log(giftsData, hashAddress, strinfiedGift);
 
-      if (currentTimestamp > gift.expiry && giftsData?.gifts?.creator === hashAddress) {
-        const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
-        const tokenSymbol = await erc20.symbol()
-        const tokenDecimals = await erc20.decimals()
-        const formattedAmount = ethers.formatUnits(gift.amount, tokenDecimals)
-
-        const details = {
-          token: tokenSymbol,
-          tokenAddress: gift.token,
-          message: gift.message,
-          amount: formattedAmount,
-          expiry: gift.expiry.toString(),
-          timeCreated: gift.timeCreated.toString(),
-          claimed: gift.claimed,
-          sender: gift.creator,
-          status: gift.status,
-        }
-
+      if(gift.creator !== hashAddress) {
+        
         return {
-          isValid: true,
-          message: "Gift is valid and ready to be claimed!",
-          details,
+          isValid: false,
+          message: "You don't have creator authorization to reclaim this gift.",
         }
+      }
+
+      const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
+      const tokenSymbol = await erc20.symbol()
+      const tokenDecimals = await erc20.decimals()
+      const formattedAmount = ethers.formatUnits(gift.amount, tokenDecimals)
+
+      const details = {
+        token: tokenSymbol,
+        tokenAddress: gift.token,
+        message: gift.message,
+        amount: formattedAmount,
+        expiry: gift.expiry.toString(),
+        timeCreated: gift.timeCreated.toString(),
+        claimed: gift.claimed,
+        sender: gift.creator,
+        status: gift.status,
       }
 
       return {
-        isValid: false,
-        message: "You don't have creator authorization to reclaim this gift.",
+        isValid: true,
+        message: "Gift is ready to be reclaim!",
+        details,
       }
+
     } catch (error: any) {
       console.error("Validation error:", error)
       let errorMessage = "An unknown error occurred."
@@ -210,12 +212,18 @@ export default function ReclaimGift() {
         functionName: "reclaimGift",
         args: [codeHash],
       });
+
+      // const tx = await contract.reclaimGift(codeHash);
+      // console.log("Transaction:", tx);
+      // const receipt = await tx.wait();
+      // console.log("Transaction receipt:", receipt);
+
       // console.log(provider, signer, contract, hash);
 
-      // toast({
-      //   title: "Success",
-      //   description: "Gift claimed successfully!",
-      // });
+      toast({
+        title: "Success",
+        description: "Gift Reclaimed Successfully!",
+      });
       // Update UI
       setValidationResult({
         ...validationResult,
@@ -494,7 +502,7 @@ export default function ReclaimGift() {
                     disabled={loading}
                   >
                     {loading ? (
-                      <>Claiming...</>
+                      <>Reclaiming...</>
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />

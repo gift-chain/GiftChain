@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { CheckCircle2, XCircle } from "lucide-react"
-import { ethers } from "ethers"
+import { ethers, keccak256 } from "ethers"
 import GiftChainABI from "../../abi/GiftChain.json"
 import erc20ABI from "../../abi/erc20ABI.json"
 import { useAccount, useWalletClient } from "wagmi"
@@ -175,6 +175,15 @@ export default function ClaimGiftCard() {
 
     const claimGift = async () => {
         if (!validationResult?.isValid || !validationResult.details) {
+            return;
+        }
+
+        if(validationResult.details.sender === ethers.keccak256(ethers.getAddress(address!))) {
+            toast({
+                title: "Error",
+                description: "You cannot claim your own valid gift.",
+                variant: "destructive",
+            })
             return;
         }
 

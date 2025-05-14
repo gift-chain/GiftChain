@@ -16,7 +16,6 @@ import { format } from 'date-fns';
 import { Contract, BrowserProvider, parseUnits } from 'ethers';
 // ERC-20 ABI for allowance, approve, decimals
 import ERC20_ABI from "@/abi/ERC20_ABI.json";
-import { maxUint64 } from "viem"
 
 interface GiftForm {
   token: string;
@@ -44,12 +43,14 @@ declare global {
 
 export default function CreateGiftCard() {
   const [selectedDesign, setSelectedDesign] = useState(0)
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined)
 
   const router = useRouter()
   const { toast } = useToast()
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+
   const [form, setForm] = useState<GiftForm>({
     token: 'USDT',
     amount: '',
@@ -60,8 +61,7 @@ export default function CreateGiftCard() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
-  const [checkingAllowance, setCheckingAllowance] = useState(false);
-  const [] = useState()
+
 
   const cardDesigns = [
     "/placeholder.svg?height=200&width=320",
@@ -74,9 +74,9 @@ export default function CreateGiftCard() {
 
   // Token map (Sepolia testnet addresses)
   const tokenMap: Record<string, string> = {
-    USDT: '0xb1B83B96402978F212af2415b1BffAad0D2aF1bb', // Sepolia USDT
-    USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia USDC (replace with actual)
-    DAI: '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2', // Sepolia DAI (replace with actual)
+    USDT: '0x7A8532Bd4067cD5C9834cD0eCcb8e71088c9fbf8', // Sepolia USDT
+    USDC: '0x437011e4f16a4Be60Fe01aD6678dBFf81AEbaEd4', // Sepolia USDC
+    DAI: '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2', // Sepolia DAI
   };
 
   const tokens = Object.keys(tokenMap);
@@ -95,10 +95,6 @@ export default function CreateGiftCard() {
         abi: ERC20_ABI,
       }
 
-      // console.log("Got here.")
-      // Get decimals
-      // const decimals = tokenDecimals[form.token] || 6;
-      // const decimals = await tokenContract.decimals();
       const decimals = await publicClient.readContract({
         address: tokenAddress as `0x${string}`,
         abi: ERC20_ABI,
@@ -107,30 +103,14 @@ export default function CreateGiftCard() {
       console.log(decimals)
       const amountBN = parseUnits(amount, BigInt(decimals!.toString()));
 
-      // Check allowance
-      // const allowance = await tokenContract.allowance(address, RELAYER_ADDRESS);
-      // const allowance = await publicClient.readContract({
-      //   address: tokenAddress as `0x${string}`,
-      //   abi: ERC20_ABI,
-      //   functionName: "allowance",
-      //   args: [signer.address, RELAYER_ADDRESS]
-      // });
-      // console.log("Allowance => ", allowance)
+      const tx = await tokenContract.approve(RELAYER_ADDRESS, amountBN);
+      console.log("Transaction => ", tx)
+      
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      console.log("Transaction receipt => ", receipt)
 
-      // if (BigInt(allowance!.toString()) < BigInt(amountBN.toString())) {
-        // setIsApproving(true);
-        // Approve the exact amount
-        const hash = await walletClient.writeContract({
-          address: tokenAddress as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [RELAYER_ADDRESS as `0x${string}`, amountBN],
-        });
-        console.log(hash)
-        // setIsApproving(false);
-        return true;
-      // }
-      // return true;
+      return true;
     } catch (err: any) {
       setError(`Approval failed: ${err.message || 'Unknown error'}`);
       setIsApproving(false);
@@ -310,7 +290,7 @@ export default function CreateGiftCard() {
           <div className="mt-8">
             <Button className="w-full gap-2 glow-border" size="lg" onClick={handleSubmit} disabled={isLoading || isApproving || !address}>
               <Zap className="h-5 w-5" />
-              {isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
+              {isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift... Wait a moment' : 'Create Gift Card'}
             </Button>
           </div>
 
