@@ -54,6 +54,7 @@ export default function ReclaimGift() {
   const { data: giftsData, loading: giftsLoading } = useQuery(GET_GIFTS, {
     variables: { creator: address?.toLowerCase() },
     skip: !address, // Skip query if no address
+    fetchPolicy: "network-only",
   })
 
   // Initialize provider and contract on component mount
@@ -106,7 +107,7 @@ export default function ReclaimGift() {
       if (currentTimestamp < gift.expiry) {
         return {
           isValid: false,
-          message: "This gift has not expired.",
+          message: "This gift has not expired. You cannot reclaim it yet.",
         }
       }
 
@@ -129,7 +130,6 @@ export default function ReclaimGift() {
         }
       }
 
-      // if (currentTimestamp > gift.expiry && gift.creator === hashAddress) {
       const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
       const tokenSymbol = await erc20.symbol()
       const tokenDecimals = await erc20.decimals()
@@ -149,10 +149,9 @@ export default function ReclaimGift() {
 
       return {
         isValid: true,
-        message: "Gift is ready to be reclaimed!",
+        message: "Gift is ready to be reclaim!",
         details,
       }
-      // }
 
     } catch (error: any) {
       console.error("Validation error:", error)
