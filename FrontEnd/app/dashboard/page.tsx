@@ -909,8 +909,8 @@ export default function Dashboard() {
           <Card className="flex-1 glass glow-card" style={{ minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="gradient-text">Gift Card Activity</CardTitle>
-                <CardDescription>Monthly gift card creation and claims</CardDescription>
+                <CardTitle className="gradient-text">Gift Activity</CardTitle>
+                <CardDescription>Monthly gift creation and claims</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -963,7 +963,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {pieChartData.length === 0 ? (
-                <p className="text-center text-muted-foreground">No gift card data available</p>
+                <p className="text-center text-muted-foreground">No gift data available</p>
               ) : (
                 <div className="h-[200px] w-full">
                   <PieChartComponent
@@ -1159,7 +1159,8 @@ export default function Dashboard() {
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-primary">{card.amount}</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          {card.id ? `Gift Card #${card.id}` : "Loading..."}
+                          Gift Code {card.id ? <span className="font-bold"> {card.id} </span> : "Loading..."}
+                          {/* {card.id ? `Gift Code ${card.id}` : "Loading..."} */}
                         </CardDescription>
                       </div>
                       <div className="flex justify-start">
