@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import WalletConnect from "@/components/wallet-connect";
 import { Gift, Wallet } from "lucide-react"
 import { motion } from 'framer-motion';
 import { useAccount } from "wagmi";
@@ -12,6 +13,7 @@ const MotionGift = motion(Gift);
 export default function HeroSection() {
   const [isHovered, setIsHovered] = useState(false)
   const { isConnected } = useAccount()
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <section className="relative pt-24 pb-12 md:pt-32 md:pb-24 mesh-bg overflow-hidden">
@@ -81,13 +83,17 @@ export default function HeroSection() {
             </>
             ) : (
             <>
-              <Button size="lg" className="gap-2 glow-border" asChild>
+              <Button size="lg" onClick={() => setIsModalOpen(true)} className="gap-2 glow-border" asChild>
                 <Link href="">
                   <Wallet className="h-5 w-5" />
                   Connect Wallet
                 </Link>
               </Button>
-              
+              {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                  <WalletConnect handleModal={() => setIsModalOpen(false)} />
+                </div>
+              )}
             </>
           )}
 
