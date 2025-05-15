@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Gift,
   Clock,
@@ -790,7 +791,8 @@ export default function Dashboard() {
   if (giftsLoading || claimedLoading || reclaimedLoading || isLoading) {
     return (
       <div className="container flex items-center justify-center min-h-screen hexagon-bg text-foreground">
-        Loading...
+        <Spinner size="lg" /> 
+        {/* <p className="mt-4 text-green-500 font-medium">Loading your dashboard...</p> */}
       </div>
     );
   }
@@ -905,7 +907,7 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-4 md:flex-row md:gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="flex-1 glass glow-card" style={{ minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
@@ -947,7 +949,7 @@ export default function Dashboard() {
                     index="name"
                     categories={["total"]}
                     colors={["#00b7eb"]}
-                    valueFormatter={(value: number) => `${value} cards`}
+                    valueFormatter={(value: number) => `${value} gifts`}
                     className="h-full w-full"
                   />
                 </div>
