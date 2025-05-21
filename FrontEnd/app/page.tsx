@@ -17,7 +17,7 @@ export default function Home() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4 gradient-text">How It Works</h2>
           <p className="text-muted-foreground md:w-2/3 mx-auto">
-            Send and receive gift on the blockchain with ease. Connect your wallet, create cards, and share them
+            Send and receive gifts on the blockchain with ease. Connect your wallet, create gifts, and share them
             with friends and family.
           </p>
         </div>
@@ -26,17 +26,17 @@ export default function Home() {
           <FeatureCard
             icon={<Wallet className="h-12 w-12 text-primary" />}
             title="Connect Wallet"
-            description="Connect your blockchain wallet to get started with our secure gift card platform."
+            description="Connect your blockchain wallet to get started with our secure gift platform."
           />
           <FeatureCard
             icon={<Gift className="h-12 w-12 text-primary" />}
-            title="Create Gift Cards"
-            description="Create custom gift cards with any amount and send them to anyone with a wallet address."
+            title="Create Gift"
+            description="Create custom gift with any amount and send them to anyone with a wallet address."
           />
           <FeatureCard
             icon={<Zap className="h-12 w-12 text-primary" />}
             title="Claim & Reclaim"
-            description="Recipients can claim gift cards instantly, or you can reclaim unclaimed cards."
+            description="Recipients can claim gifts instantly, or you can reclaim unclaimed gifts."
           />
         </div>
       </section>
@@ -46,11 +46,11 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4 gradient-text">
-                Track All Your Gift Cards
+                Track All Your Gifts
               </h2>
               <p className="text-muted-foreground mb-6">
-                Our dashboard gives you a complete overview of all gift cards you've created and claimed. Monitor their
-                status, claim new cards, and reclaim unclaimed cards all in one place.
+                Our dashboard gives you a complete overview of all gifts you've created and claimed. Monitor their
+                status, claim new gifts, and reclaim unclaimed gifts all in one place.
               </p>
               <Button asChild size="lg" className="glow-border">
                 <Link href="/dashboard">Go to Dashboard</Link>
@@ -68,7 +68,7 @@ export default function Home() {
       <section className="container py-12 md:py-24 text-center">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4 gradient-text">Ready to Get Started?</h2>
         <p className="text-muted-foreground md:w-2/3 mx-auto mb-8">
-          Connect your wallet now and start creating blockchain gift cards in seconds.
+          Connect your wallet now and start creating blockchain gifts in seconds.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {/* <Button size="lg" variant="default" className="glow-border">

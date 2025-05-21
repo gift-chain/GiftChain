@@ -181,7 +181,7 @@ async function generateGiftCardImage(details) {
 
         // Save to file
         await image.toFile(filePath);
-        console.log(`Generated gift card image: ${filePath}`);
+        console.log(`Generated gift image: ${filePath}`);
         resolve(`/api/download/${fileName}`);
       } catch (err) {
         console.error("Image generation error:", err);
@@ -316,9 +316,9 @@ const createGift = async (req, res) => {
           creator, 
           relayer.address, 
           amountBN, 
-          // {
-          //   gasLimit,
-          // }
+          {
+            gasLimit,
+          }
         );
         console.log("Transfer transaction hash:", pullTx.hash);
         const receipt = await pullTx.wait();
@@ -420,9 +420,9 @@ const createGift = async (req, res) => {
           message, // _message
           hashedCode, // _giftID
           creatorHash, // _creator
-          // {
-          //   gasLimit: gasLimit,
-          // }
+          {
+            gasLimit: gasLimit,
+          }
         );
         console.log("Gift transaction hash:", giftTx.hash);
         const receipt = await giftTx.wait();
@@ -474,16 +474,16 @@ const createGift = async (req, res) => {
           }
         }
 
-        // Generate PNG
-        const downloadUrl = await generateGiftCardImage({
-          giftID: rawCode,
-          amount: ethers.formatUnits(amountBN, decimals),
-          token,
-          expiry,
-          message,
-          creator,
-          symbol,
-        });
+        // // Generate PNG
+        // const downloadUrl = await generateGiftCardImage({
+        //   giftID: rawCode,
+        //   amount: ethers.formatUnits(amountBN, decimals),
+        //   token,
+        //   expiry,
+        //   message,
+        //   creator,
+        //   symbol,
+        // });
 
         res.status(200).json({ 
           success: true, 
@@ -496,7 +496,7 @@ const createGift = async (req, res) => {
             expiry,
             message,
             creator,
-            downloadUrl,
+            // downloadUrl,
           },
         });
       } catch (err) {
@@ -590,7 +590,7 @@ const downloadGiftCard = (req, res) => {
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({
       success: false,
-      error: "Gift card not found",
+      error: "Gift not found",
     });
   }
 
@@ -599,7 +599,7 @@ const downloadGiftCard = (req, res) => {
       console.error("Download error:", err);
       res.status(500).json({
         success: false,
-        error: "Failed to download gift card",
+        error: "Failed to download gift",
       });
     }
   });

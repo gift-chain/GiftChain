@@ -1,31 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  XCircle,
-  Wallet,
-  Copy,
-  ExternalLink,
-  Clock,
-  Info,
-  Gift
-} from "lucide-react";
-import { ethers } from "ethers";
-import GiftChainABI from "../../app/abi/GiftChain.json";
-import erc20ABI from "../../app/abi/erc20ABI.json";
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
+import { CheckCircle2, XCircle } from "lucide-react"
+import { ethers } from "ethers"
+import GiftChainABI from "../../abi/GiftChain.json"
+import erc20ABI from "../../abi/erc20ABI.json"
+import { useAccount, useWalletClient } from "wagmi"
+import { GET_GIFTS } from "../../hooks/subgraph/queries";
+import { useQuery } from "@apollo/client"
 
 const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473";
 const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/7Ehr_350KwRXw2n30OoeevZUOFu12XYX";
@@ -55,24 +42,26 @@ interface GiftDetails {
 }
 
 export default function ReclaimGift() {
-  const [code, setCode] = useState<string>("");
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [giftDetails, setGiftDetails] = useState<GiftDetails | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [txSuccess, setTxSuccess] = useState<boolean>(false);
-  const [txHash, setTxHash] = useState<string>("");
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [showInfoTooltip, setShowInfoTooltip] = useState<boolean>(false);
-  const router = useRouter();
-  const { toast } = useToast();
+  const [code, setCode] = useState<string>("")
+  const [errors, setErrors] = useState<ValidationErrors>({})
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+  const [provider, setProvider] = useState<ethers.JsonRpcProvider | null>(null)
+  const [contract, setContract] = useState<ethers.Contract | null>(null)
+  const router = useRouter()
+  const { toast } = useToast()
+  const { isConnected, address } = useAccount()
+  const { data: walletClient } = useWalletClient()
 
-  // Initialize read-only provider and contract
-  const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
-  const contract = new ethers.Contract(CONTRACT_ADDRESS, GiftChainABI, provider);
+  // Add useQuery at component level
+  const { data: giftsData, loading: giftsLoading } = useQuery(GET_GIFTS, {
+    variables: { creator: address?.toLowerCase() },
+    skip: !address, // Skip query if no address
+    fetchPolicy: "network-only",
+  })
 
-  // Check for existing wallet connection on page load
+  // Initialize provider and contract on component mount
   useEffect(() => {
     const checkWalletConnection = async () => {
       if (typeof window.ethereum !== "undefined") {
@@ -137,37 +126,66 @@ export default function ReclaimGift() {
       if (gift.amount == 0) {
         return {
           isValid: false,
-          status: GiftStatus.NONE,
-          token: "",
-          tokenAddress: "",
-          amount: "",
-          message: "",
-          expiry: 0,
-          timeCreated: 0,
-          creator: "",
-          errorMessage: "Gift card not found. Please check your code.",
-        };
+          message: "Gift not found. Please check your code.",
+        }
+      }
+      const block = await provider.getBlock("latest")
+      if (!block) {
+        return {
+          isValid: false,
+          message: "Failed to get current block",
+        }
+      }
+      const currentTimestamp = block.timestamp
+      if (currentTimestamp < gift.expiry) {
+        return {
+          isValid: false,
+          message: "This gift has not expired. You cannot reclaim it yet.",
+        }
       }
 
-      const status = Number(gift.status);
-      const erc20 = new ethers.Contract(gift.token, erc20ABI, provider);
-      const tokenSymbol = await erc20.symbol();
-      const tokenDecimals = await erc20.decimals();
-      const formattedAmount = ethers.formatUnits(gift.amount, tokenDecimals);
+      if (gift.claimed) {
+        return {
+          isValid: false,
+          message: "This gift has already been claimed.",
+        }
+      }
 
-      const details: GiftDetails = {
-        isValid: true,
-        status,
+      const hashAddress = ethers.keccak256(ethers.getAddress(address!))
+      // const strinfiedGift = JSON.parse(JSON.stringify(giftsData))
+      // console.log(giftsData, hashAddress, strinfiedGift);
+
+      if(gift.creator !== hashAddress) {
+        
+        return {
+          isValid: false,
+          message: "You don't have creator authorization to reclaim this gift.",
+        }
+      }
+
+      const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
+      const tokenSymbol = await erc20.symbol()
+      const tokenDecimals = await erc20.decimals()
+      const formattedAmount = ethers.formatUnits(gift.amount, tokenDecimals)
+
+      const details = {
         token: tokenSymbol,
         tokenAddress: gift.token,
-        amount: formattedAmount,
         message: gift.message,
-        expiry: Number(gift.expiry),
-        timeCreated: Number(gift.timeCreated),
-        creator: gift.creator,
-      };
-      console.log("Gift details:", details);
-      return details;
+        amount: formattedAmount,
+        expiry: gift.expiry.toString(),
+        timeCreated: gift.timeCreated.toString(),
+        claimed: gift.claimed,
+        sender: gift.creator,
+        status: gift.status,
+      }
+
+      return {
+        isValid: true,
+        message: "Gift is ready to be reclaim!",
+        details,
+      }
+
     } catch (error: any) {
       console.error("Validation error:", error);
       let errorMessage = "An unknown error occurred.";
@@ -175,15 +193,13 @@ export default function ReclaimGift() {
         const reason = error.reason || error.data?.message;
         console.log("Error reason:", reason);
         if (reason.includes("GiftNotFound")) {
-          errorMessage = "Gift card not found. Please check your code.";
-        } else if (reason.includes("GiftAlreadyRedeemed") || reason.includes("SUCCESSFUL")) {
-          errorMessage = "This gift card has already been redeemed and cannot be reclaimed.";
-        } else if (reason.includes("GiftAlreadyReclaimed") || reason.includes("RECLAIMED")) {
-          errorMessage = "This gift card has already been reclaimed.";
+          errorMessage = "Gift not found. Please check your code."
+        } else if (reason.includes("GiftAlreadyRedeemed")) {
+          errorMessage = "This gift has already been redeemed."
+        } else if (reason.includes("GiftAlreadyReclaimed")) {
+          errorMessage = "This gift has been reclaimed by the sender."
         } else if (reason.includes("InvalidGiftStatus")) {
-          errorMessage = "This gift card is not pending or has an invalid status.";
-        } else if (reason.includes("is not a function")) {
-          errorMessage = "Contract error: validateGift function not found. Please check contract deployment.";
+          errorMessage = "This gift is expired or has an invalid status."
         } else {
           errorMessage = `Contract error: ${reason}`;
         }
@@ -194,16 +210,79 @@ export default function ReclaimGift() {
 
       return {
         isValid: false,
-        status: GiftStatus.NONE,
-        token: "",
-        tokenAddress: "",
-        amount: "",
-        message: "",
-        expiry: 0,
-        timeCreated: 0,
-        creator: "",
-        errorMessage,
-      };
+        message: errorMessage,
+      }
+    }
+  }
+
+  const reclaimGift = async () => {
+    if (!validationResult?.isValid || !validationResult.details) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const normalizedCode = code.toLowerCase();
+      const codeHash = ethers.keccak256(ethers.toUtf8Bytes(normalizedCode));
+
+      // Check if window.ethereum exists
+      if (!isConnected) {
+        throw new Error("MetaMask not detected. Please install MetaMask to claim your gift.");
+      }
+
+      // Request account access first
+      // await window.ethereum.request({ method: "eth_requestAccounts" });
+
+      // Then get provider and signer
+      const provider = new ethers.BrowserProvider(walletClient!.transport);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, GiftChainABI, signer);
+
+      const hash = await walletClient?.writeContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: GiftChainABI,
+        functionName: "reclaimGift",
+        args: [codeHash],
+      });
+
+      // const tx = await contract.reclaimGift(codeHash);
+      // console.log("Transaction:", tx);
+      // const receipt = await tx.wait();
+      // console.log("Transaction receipt:", receipt);
+
+      // console.log(provider, signer, contract, hash);
+
+      toast({
+        title: "Success",
+        description: "Gift Reclaimed Successfully!",
+      });
+      // Update UI
+      setValidationResult({
+        ...validationResult,
+        details: {
+          ...validationResult.details,
+          claimed: true,
+        },
+      });
+
+    } catch (error: any) {
+      console.error("Claim error:", error);
+
+      let errorMessage = "Failed to claim gift";
+
+      if (error.code === 4001) {
+        errorMessage = "Please connect your MetaMask wallet and approve the connection request";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -271,10 +350,10 @@ export default function ReclaimGift() {
 
   const handleCodeValidation = async () => {
     if (!code.trim() || code.length < 6) {
-      setErrors({ code: "Gift card code is required and must be at least 6 characters" });
+      setErrors({ code: "Gift code is required and must be at least 6 characters" })
       toast({
         title: "Error",
-        description: "Gift card code is required and must be at least 6 characters.",
+        description: "Gift code is required and must be at least 6 characters.",
         variant: "destructive",
       });
       return;
@@ -298,8 +377,8 @@ export default function ReclaimGift() {
         setErrors({ code: undefined });
         toast({
           title: "Success",
-          description: "Gift card validated successfully!",
-        });
+          description: "Gift validated successfully!",
+        })
       }
     } catch (error: any) {
       setLoading(false);
@@ -607,8 +686,8 @@ export default function ReclaimGift() {
               <DialogTitle className="gradient-text flex items-center gap-2">
                 {giftDetails.isValid ? (
                   <>
-                    <CheckCircle2 className="h-5 w-5 text-green-400" />
-                    Gift Card Details
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
+                    Gift Details
                   </>
                 ) : (
                   <>
@@ -755,28 +834,28 @@ export default function ReclaimGift() {
                   </div>
                 ) : giftDetails.isValid && isReclaimable(giftDetails) ? (
                   <Button
-                    onClick={handleReclaimGift}
-                    disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all duration-300 py-6 text-lg font-medium glow-border"
+                    size="lg"
+                    className="w-full gap-2 glow-border text-sm sm:text-base"
+                    onClick={reclaimGift}
+                    disabled={loading}
                   >
-                    {isSubmitting ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                        <span>Reclaiming...</span>
-                      </div>
+                    {loading ? (
+                      <>Reclaiming...</>
                     ) : (
-                      "Reclaim Tokens"
+                      <>
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Reclaim Gift
+                      </>
                     )}
                   </Button>
-                ) : (
-                  <div className="text-center p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2">
-                    <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
-                    <span className="text-red-400 text-sm">
-                      {giftDetails.errorMessage ||
-                        "This gift cannot be reclaimed (not expired, not your gift, or already processed)."}
-                    </span>
-                  </div>
                 )}
+
+                <div className="text-center text-xs sm:text-sm text-muted-foreground">
+                  <p>
+                    This gift {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
+                    Expiry date is shown above.
+                  </p>
+                </div>
               </div>
             )}
 

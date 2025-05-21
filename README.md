@@ -36,7 +36,7 @@ GiftChain is designed to make crypto gifting as simple as sending a message. It 
 
 ## Features
 
-- **Create Gift Cards**: Users can create crypto gift cards with customizable amounts and expiration dates.
+- **Create Gift**: Users can create crypto gift with customizable amounts and expiration dates.
 - **Claim Gifts**: Recipients can claim their crypto gifts securely.
 - **Reclaim Gifts**: Unclaimed gifts can be reclaimed by the sender after expiration.
 - **Anonymity**: Sender's address is concealed against on-chain scrutiny.
@@ -70,7 +70,7 @@ GiftChain is designed to make crypto gifting as simple as sending a message. It 
 GiftChain/
 ├── FrontEnd/               # React-based frontend
 │   ├── src/
-│   │   ├── pages/          # Pages like Dashboard, Home, GenerateCard
+│   │   ├── pages/          # Pages like Dashboard, Home, CreateGift
 │   │   ├── ui/             # Reusable UI components
 │   │   ├── assets/         # Images and icons
 │   │   └── main.tsx        # Entry point for the frontend
@@ -210,7 +210,7 @@ The GiftChain smart contract is the backbone of the application, enabling the cr
 
 ## Subgraph 
 
-The subgraph is used to index and query blockchain data in real-time. It is built using The Graph and provides APIs for querying gift card transactions.
+The subgraph is used to index and query blockchain data in real-time. It is built using The Graph and provides APIs for querying gift transactions.
 
 Key Files
 - schema.graphql: Defines the data structure.

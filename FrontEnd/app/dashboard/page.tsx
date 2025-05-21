@@ -25,17 +25,27 @@ import {
 import WalletConnect from "@/components/wallet-connect";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from "../subgraph/useGiftQueries";
+import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts } from "../../hooks/subgraph/useGiftQueries";
 import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
-import giftChainABI from "../abi/GiftChain.json";
+import giftChainABI from "../../abi/GiftChain.json";
+import ERC20_ABI from "@/abi/ERC20_ABI.json";
 
 // Chart components (ensure these exist in your project)
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 
-// Replace with your actual contract address
+// Contract address
 const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473";
+
+// Stable coins address supported
+const USDT = '0x7A8532Bd4067cD5C9834cD0eCcb8e71088c9fbf8'; // Sepolia USDT
+const USDC = '0x437011e4f16a4Be60Fe01aD6678dBFf81AEbaEd4'; // Sepolia USDC
+const DAI = '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2'; // Sepolia DAI
+const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/uoHUh-NxGIzghN1job_SDZjGuQQ7snrT"
+
+// const provider = new ethers.JsonRpcProvider(PROVIDER_URL)
+
 
 // Interfaces
 interface Stats {
@@ -157,6 +167,9 @@ export default function Dashboard() {
   const [barChartData, setBarChartData] = useState<ChartData[]>([]);
   const [pieChartData, setPieChartData] = useState<PieChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const {refetchCreatedGifts} = useUserGifts(userAddress);
+  const {refetchClaimedGifts} = useUserClaimedGifts(userAddress);
+  const {refetchReclaimedGifts} = useUserReclaimedGifts(userAddress);
 
   // Pagination states
   const [createdCurrentPage, setCreatedCurrentPage] = useState(1);
@@ -166,9 +179,78 @@ export default function Dashboard() {
   // Debug counters
   const computeDataCount = useRef(0);
   const subgraphFetchCount = useRef({ created: 0, claimed: 0, reclaimed: 0 });
+  const [tokenBalances, setTokenBalances] = useState({
+    USDT: { raw: BigInt(0), formatted: "0" },
+    USDC: { raw: BigInt(0), formatted: "0" },
+    DAI: { raw: BigInt(0), formatted: "0" }
+  });
+  // const [tokenBalances, setTokenBalances] = useState({
+  //   USDT: BigInt(0),
+  //   USDC: BigInt(0),
+  //   DAI: BigInt(0)
+  // });
 
   // Wallet connection
   const { address, isConnected: wagmiIsConnected } = useAccount();
+
+  useEffect(() => {
+    const fetchTokenBalances = async () => {
+      if (!userAddress || !isConnected) return;
+  
+      try {
+        const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
+        
+        const USDTContract = new ethers.Contract(USDT, ERC20_ABI, provider);
+        const USDCContract = new ethers.Contract(USDC, ERC20_ABI, provider);
+        const DAIContract = new ethers.Contract(DAI, ERC20_ABI, provider);
+  
+        const [
+          USDTBalance, USDTDecimal,
+          USDCBalance, USDCDecimal,
+          DAIBalance, DAIDecimal
+        ] = await Promise.all([
+          USDTContract.balanceOf(userAddress),
+          USDTContract.decimals(),
+          USDCContract.balanceOf(userAddress),
+          USDCContract.decimals(),
+          DAIContract.balanceOf(userAddress),
+          DAIContract.decimals()
+        ]);
+
+        console.log("USDT Decimal => ", USDTDecimal)
+        console.log("USDT Decimal String => ", USDTDecimal.toString())
+  
+        // setTokenBalances({
+        //   USDT: ethers.parseUnits(USDTBalance.toString(), USDTDecimal.toString()),
+        //   USDC: ethers.parseUnits(USDCBalance.toString(), USDCDecimal),
+        //   DAI: ethers.parseUnits(DAIBalance.toString(), DAIDecimal)
+        // });
+        setTokenBalances({
+          USDT: {
+            raw: USDTBalance,
+            formatted: ethers.formatUnits(USDTBalance, USDTDecimal)
+          },
+          USDC: {
+            raw: USDCBalance,
+            formatted: ethers.formatUnits(USDCBalance, USDCDecimal)
+          },
+          DAI: {
+            raw: DAIBalance,
+            formatted: ethers.formatUnits(DAIBalance, DAIDecimal)
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching token balances:', error);
+      }
+    };
+  
+    fetchTokenBalances();
+    
+    // Set up an interval to refresh balances
+    const intervalId = setInterval(fetchTokenBalances, 30000); // Refresh every 30 seconds
+  
+    return () => clearInterval(intervalId);
+  }, [userAddress, isConnected]);
 
   useEffect(() => {
     console.log("Wallet connection update:", { wagmiIsConnected, address });
@@ -183,20 +265,47 @@ export default function Dashboard() {
     }
   }, [wagmiIsConnected, address]);
 
+  // Add a refresh function
+  const refreshDashboard = useCallback(async () => {
+    try {
+      await Promise.all([
+        refetchCreatedGifts(),
+        refetchClaimedGifts(),
+        refetchReclaimedGifts()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+    }
+  }, [refetchCreatedGifts, refetchClaimedGifts, refetchReclaimedGifts]);
+
+
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Refresh on mount
+    refreshDashboard();
+    
+    // Refresh when window gets focus
+    const handleFocus = () => {
+      refreshDashboard();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshDashboard]);
 
   // Paginated gift cards
   const paginatedCreatedGiftCards = useMemo(() => {
     const startIndex = (createdCurrentPage - 1) * cardsPerPage;
-    console.log("Slicing createdGiftCards:", { startIndex, endIndex: startIndex + cardsPerPage, total: createdGiftCards.length });
+    console.log("Slicing createdGifts:", { startIndex, endIndex: startIndex + cardsPerPage, total: createdGiftCards.length });
     return createdGiftCards.slice(startIndex, startIndex + cardsPerPage);
   }, [createdGiftCards, createdCurrentPage, cardsPerPage]);
 
   const paginatedReceivedGiftCards = useMemo(() => {
     const startIndex = (receivedCurrentPage - 1) * cardsPerPage;
-    console.log("Slicing receivedGiftCards:", { startIndex, endIndex: startIndex + cardsPerPage, total: receivedGiftCards.length });
+    console.log("Slicing receivedGifts:", { startIndex, endIndex: startIndex + cardsPerPage, total: receivedGiftCards.length });
     return receivedGiftCards.slice(startIndex, startIndex + cardsPerPage);
   }, [receivedGiftCards, receivedCurrentPage, cardsPerPage]);
 
@@ -209,7 +318,7 @@ export default function Dashboard() {
 
     console.log("Fetching token metadata for:", address);
     try {
-      const response = await axios.get(`http://localhost:4000/api/token/${address}`);
+      const response = await axios.get(`https://gift-chain-w3lp.vercel.app/api/token/${address}`);
       const metadata = response.data;
       setTokenMetadataCache((prev) => ({
         ...prev,
@@ -313,7 +422,7 @@ export default function Dashboard() {
             });
 
             axios
-              .get(`http://localhost:4000/api/gift/${giftID.toLowerCase()}`)
+              .get(`https://gift-chain-w3lp.vercel.app/api/gift/${giftID.toLowerCase()}`)
               .then((response) => {
                 console.log("Fetched giftID:", response.data.giftID);
                 setGiftIDs((prev) => ({
@@ -353,6 +462,7 @@ export default function Dashboard() {
   // Fetch giftIDs
   useEffect(() => {
     const fetchGiftIDs = async () => {
+
       const uniqueHashedCodes = Array.from(
         new Set([
           ...allGifts.map((gift) => gift.id.toLowerCase()),
@@ -367,7 +477,7 @@ export default function Dashboard() {
       console.log("Fetching giftIDs for:", newHashedCodes);
       const giftIDPromises = newHashedCodes.map(async (hashedCode) => {
         try {
-          const response = await axios.get(`http://localhost:4000/api/gift/${hashedCode}`);
+          const response = await axios.get(`https://gift-chain-w3lp.vercel.app/api/gift/${hashedCode}`);
           return { hashedCode, giftID: response.data.giftID };
         } catch (error) {
           console.error(`Error fetching giftID for ${hashedCode}:`, error);
@@ -393,39 +503,39 @@ export default function Dashboard() {
       console.log("Skipping computeData: Subgraph still loading");
       return;
     }
-  
+
     computeDataCount.current += 1;
     console.log(`computeData run #${computeDataCount.current}`);
     setIsLoading(true);
-  
+
     try {
       // Initialize Sets for status checks
       const reclaimedGiftIds = new Set(reclaimedGifts.map((r) => r.gift.id.toLowerCase()));
       const claimedGiftIds = new Set(claimedGifts.map((c) => c.gift.id.toLowerCase()));
       const currentDate = new Date();
-  
+
       // Debug: Log claimedGifts and claimedGiftIds
       console.log("claimedGifts:", claimedGifts);
       console.log("claimedGiftIds:", Array.from(claimedGiftIds));
-  
+
       // Stats
       let totalGiftValue = 0;
       const totalCreated = allGifts.length;
       const totalReceived = claimedGifts.length;
       const claimedCount = claimedGifts.length;
       const claimRate = totalCreated > 0 ? (claimedCount / totalCreated) * 100 : 0;
-  
+
       for (const gift of allGifts) {
         const { decimals } = await fetchTokenMetadata(gift.token);
         const amount = parseFloat(formatUnits(gift.amount, decimals));
         totalGiftValue += amount;
       }
-  
+
       // Stable growth percentages
       const createdGrowth = totalCreated > 0 ? ((totalCreated % 10) + 5).toString() : "0";
       const receivedGrowth = totalReceived > 0 ? ((totalReceived % 15) + 10).toString() : "0";
       const claimRateGrowth = claimRate > 0 ? ((claimRate % 5) + 3).toString() : "0";
-  
+
       setStats({
         totalCreated,
         totalReceived,
@@ -435,7 +545,7 @@ export default function Dashboard() {
         receivedGrowth,
         claimRateGrowth,
       });
-  
+
       // Created gift cards
       const newCreatedGiftCards: GiftCard[] = [];
       for (const gift of allGifts) {
@@ -445,7 +555,7 @@ export default function Dashboard() {
         const isReclaimed = reclaimedGiftIds.has(gift.id.toLowerCase());
         const isClaimed = claimedGiftIds.has(gift.id.toLowerCase()) || !!gift.claimed;
         const formattedAmount = parseFloat(formatUnits(gift.amount, decimals)).toFixed(2);
-  
+
         // Debug: Log status checks for each gift
         console.log(`Gift ${gift.id} status checks:`, {
           isClaimed,
@@ -454,7 +564,7 @@ export default function Dashboard() {
           hasClaimedData: !!gift.claimed,
           inClaimedGiftIds: claimedGiftIds.has(gift.id.toLowerCase()),
         });
-  
+
         let status: string;
         if (isReclaimed) {
           status = "reclaimed";
@@ -465,7 +575,7 @@ export default function Dashboard() {
         } else {
           status = "pending";
         }
-  
+
         newCreatedGiftCards.push({
           id: giftIDs[gift.id.toLowerCase()] || "",
           amount: `${formattedAmount} ${symbol}`,
@@ -484,14 +594,14 @@ export default function Dashboard() {
       }
       console.log("Setting createdGiftCards:", newCreatedGiftCards);
       setCreatedGiftCards(newCreatedGiftCards);
-  
+
       // Received gift cards
       const newReceivedGiftCards: GiftCard[] = [];
       for (const claimed of claimedGifts) {
         const { symbol, decimals } = await fetchTokenMetadata(claimed.gift.token);
         const expiryDate = new Date(parseInt(claimed.gift.expiry) * 1000);
         const formattedAmount = parseFloat(formatUnits(claimed.amount, decimals)).toFixed(2);
-  
+
         newReceivedGiftCards.push({
           id: giftIDs[claimed.gift.id.toLowerCase()] || "",
           amount: `${formattedAmount} ${symbol}`,
@@ -508,7 +618,7 @@ export default function Dashboard() {
       }
       console.log("Setting receivedGiftCards:", newReceivedGiftCards);
       setReceivedGiftCards(newReceivedGiftCards);
-  
+
       // Area chart data
       const monthlyData: { [key: string]: number } = {};
       for (const gift of allGifts) {
@@ -537,7 +647,7 @@ export default function Dashboard() {
       }));
       console.log("Setting areaChartData:", newAreaChartData);
       setAreaChartData(newAreaChartData);
-  
+
       // Bar chart data
       const tokenCounts: { [key: string]: number } = {};
       for (const gift of allGifts) {
@@ -550,7 +660,7 @@ export default function Dashboard() {
       }));
       console.log("Setting barChartData:", newBarChartData);
       setBarChartData(newBarChartData);
-  
+
       // Pie chart data
       const statusCounts = {
         Claimed: 0,
@@ -558,14 +668,14 @@ export default function Dashboard() {
         Expired: 0,
         Reclaimed: 0,
       };
-  
+
       for (const gift of allGifts) {
         const giftId = gift.id.toLowerCase();
         const expiryDate = new Date(parseInt(gift.expiry) * 1000);
         const isExpired = expiryDate < currentDate;
         const isClaimed = claimedGiftIds.has(giftId) || !!gift.claimed;
         const isReclaimed = reclaimedGiftIds.has(giftId);
-  
+
         let status: string;
         if (isReclaimed) {
           statusCounts.Reclaimed += 1;
@@ -587,7 +697,7 @@ export default function Dashboard() {
           hasClaimedData: !!gift.claimed,
         });
       }
-  
+
       const newPieChartData = Object.entries(statusCounts)
         .filter(([_, value]) => value > 0)
         .map(([name, value]) => ({
@@ -654,10 +764,10 @@ export default function Dashboard() {
           className="max-w-md"
         >
           <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl gradient-text">
-            Your Gift Card Dashboard
+            Your Gift Dashboard
           </h1>
           <p className="mt-4 text-muted-foreground">
-            Connect your wallet to view your created and received gift cards.
+            Connect your wallet to view your created and received gifts.
           </p>
           <div className="mt-8">
             <Button
@@ -697,26 +807,32 @@ export default function Dashboard() {
     <div className="container px-4 py-8 hexagon-bg">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl gradient-text">
-          Your Gift Card Dashboard
+          Your Gift Dashboard
         </h1>
-        <p className="mt-2 text-muted-foreground">Manage your created and received gift cards</p>
+        <p className="mt-2 text-muted-foreground">Manage your created and received gifts</p>
       </div>
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between glass rounded-lg border p-4">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="px-3 py-1 border glow-border text-foreground">
-            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> Connected: {userAddress.slice(0, 6)}...
-            {userAddress.slice(-4)}
+          <p>Token Balance</p>
+          <Badge variant="outline" className="px-3 py-3 border glow-border text-foreground">
+            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> {tokenBalances.USDT.formatted} USDT
+          </Badge>
+          <Badge variant="outline" className="px-3 py-3 border glow-border text-foreground">
+            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> {tokenBalances.USDC.formatted} USDC
+          </Badge>
+          <Badge variant="outline" className="px-3 py-3 border glow-border text-foreground">
+            <span className="mr-1 h-2 w-2 rounded-full bg-primary"></span> {tokenBalances.DAI.formatted} DAI
           </Badge>
         </div>
         <div className="flex gap-2">
           <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 glow-border">
             <Link href="/create">
-              Create New Gift Card <Gift className="ml-2 h-4 w-4" />
+              Create New Gift <Gift className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button asChild variant="outline" className="border hover:bg-primary/10 glow-border">
-            <Link href="/gift">Manage Gift Cards</Link>
+            <Link href="/gift">Manage Gifts</Link>
           </Button>
         </div>
       </div>
@@ -793,8 +909,8 @@ export default function Dashboard() {
           <Card className="flex-1 glass glow-card" style={{ minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
-                <CardTitle className="gradient-text">Gift Card Activity</CardTitle>
-                <CardDescription>Monthly gift card creation and claims</CardDescription>
+                <CardTitle className="gradient-text">Gift Activity</CardTitle>
+                <CardDescription>Monthly gift creation and claims</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -818,7 +934,7 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Currency Distribution</CardTitle>
-                <CardDescription>Gift cards by currency type</CardDescription>
+                <CardDescription>Gifts by currency type</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -842,12 +958,12 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="gradient-text">Status Distribution</CardTitle>
-                <CardDescription>Current gift card statuses</CardDescription>
+                <CardDescription>Current gift statuses</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
               {pieChartData.length === 0 ? (
-                <p className="text-center text-muted-foreground">No gift card data available</p>
+                <p className="text-center text-muted-foreground">No gift data available</p>
               ) : (
                 <div className="h-[200px] w-full">
                   <PieChartComponent
@@ -870,11 +986,11 @@ export default function Dashboard() {
         <Card className="glass glow-card">
           <CardHeader>
             <CardTitle className="gradient-text">Upcoming Expirations</CardTitle>
-            <CardDescription>Gift cards that will expire soon</CardDescription>
+            <CardDescription>Gifts that will expire soon</CardDescription>
           </CardHeader>
           <CardContent>
             {createdGiftCards.filter((card) => card.status === "pending" && card.id).length === 0 ? (
-              <p className="text-center text-muted-foreground">No pending gift cards</p>
+              <p className="text-center text-muted-foreground">No pending gifts</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {createdGiftCards
@@ -905,19 +1021,19 @@ export default function Dashboard() {
             value="created"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
-            Created Gift Cards ({createdGiftCards.length})
+            Created Gifts ({createdGiftCards.length})
           </TabsTrigger>
           <TabsTrigger
             value="received"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
-            Received Gift Cards ({receivedGiftCards.length})
+            Received Gifts ({receivedGiftCards.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="created">
           {paginatedCreatedGiftCards.length === 0 ? (
-            <p className="text-center text-muted-foreground">No created gift cards available.</p>
+            <p className="text-center text-muted-foreground">No created gifts available.</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paginatedCreatedGiftCards.map((card) => (
@@ -927,7 +1043,7 @@ export default function Dashboard() {
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-primary">{card.amount}</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          {card.id ? `Gift Card #${card.id}` : "Loading..."}
+                          Gift Code {card.id ? <span className="font-bold"> {card.id} </span> : "Loading..."}
                         </CardDescription>
                       </div>
                       <div className="flex justify-start">
@@ -1033,7 +1149,7 @@ export default function Dashboard() {
 
         <TabsContent value="received">
           {paginatedReceivedGiftCards.length === 0 ? (
-            <p className="text-center text-muted-foreground">No received gift cards available.</p>
+            <p className="text-center text-muted-foreground">No received gifts available.</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {paginatedReceivedGiftCards.map((card) => (
@@ -1043,7 +1159,8 @@ export default function Dashboard() {
                       <div className="flex justify-between items-center">
                         <CardTitle className="text-primary">{card.amount}</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          {card.id ? `Gift Card #${card.id}` : "Loading..."}
+                          Gift Code {card.id ? <span className="font-bold"> {card.id} </span> : "Loading..."}
+                          {/* {card.id ? `Gift Code ${card.id}` : "Loading..."} */}
                         </CardDescription>
                       </div>
                       <div className="flex justify-start">

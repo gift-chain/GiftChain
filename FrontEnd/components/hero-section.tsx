@@ -54,39 +54,42 @@ export default function HeroSection() {
         </div>
 
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
-          Blockchain Gifts 
+          Blockchain Gifts
           <span className="text-primary glow-text"> Reimagined</span>
         </h1>
 
         <p className="text-xl text-muted-foreground max-w-[42rem] mb-8">
-          Create, send, and claim gift on the blockchain. A secure and modern way to share value with anyone,
+          Create, send, and claim gifts on the blockchain. A secure and modern way to share value with anyone,
           anywhere.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          {isConnected ? (<></>) : (
+          {isConnected ? (
             <>
               <Button size="lg" variant="outline" className="border-primary/50 hover:border-primary" asChild>
                 <Link href="/gift">
                   <Gift className="h-5 w-5 mr-2" />
-                  Create Gift Card
+                  Create Gift
                 </Link>
               </Button>
-
               <Button size="lg" variant="outline" className="border-primary/50 hover:border-primary" asChild>
                 <Link href="/dashboard">
                   <Gift className="h-5 w-5 mr-2" />
-                  Create Gift Card
+                  Dashboard
                 </Link>
               </Button>
             </>
+            ) : (
+            <>
+              <Button size="lg" className="gap-2 glow-border" asChild>
+                <Link href="">
+                  <Wallet className="h-5 w-5" />
+                  Connect Wallet
+                </Link>
+              </Button>
+              
+            </>
           )}
-          <Button size="lg" className="gap-2 glow-border" asChild>
-            <Link href="/dashboard">
-              <Wallet className="h-5 w-5" />
-              Connect Wallet
-            </Link>
-          </Button>
 
         </div>
       </div>
