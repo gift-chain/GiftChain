@@ -394,7 +394,6 @@ export default function Dashboard() {
         .post('https://gift-chain-w3lp.vercel.app/api/gift-codes', { ids: idsToFetch })
         .then((res: { data: Record<string, Record<string, string>> }) => {
           const {data} = res; 
-          console.log("Fetched giftIdCodes:", data.data);
           setGiftIdCodes((prev) => ({ ...prev, ...data.data }));
         })
         .catch(console.error);
@@ -404,8 +403,6 @@ export default function Dashboard() {
       setMounted(true);
     }, []);
     if (!mounted) return null;
-
-    console.log("token cach: ", tokenMetadataCache)
   
     if (loading) {
       return (
