@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const { createCode } = require("../controllers/codeController");
-const {createGift, downloadGiftCard} = require("../controllers/createGiftController");
+const {createGift, downloadGiftCard, getGiftCodes} = require("../controllers/createGiftController");
 const giftCode = require("../models/Gift.js");
 
 router.post("/generate-code", createCode);
 
 router.post("/create-gift", createGift)
+router.post("/gift-codes", getGiftCodes);
 router.get("/download/:fileName", downloadGiftCard);
 
 router.get("/gift/:hashedCode", async (req, res) => {
