@@ -893,12 +893,12 @@ export default function Dashboard() {
             <CardDescription>Gifts that will expire soon</CardDescription>
           </CardHeader>
           <CardContent>
-            {createdGifts.filter((card) => card.status === "PENDING" && card.id).length === 0 ? (
+            {createdGifts.filter((card) => card.status === "PENDING" && Number(card.expiry) > Date.now() / 1000).length === 0 ? (
               <p className="text-center text-muted-foreground">No pending gifts</p>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {createdGifts
-                  .filter((card) => card.status === "PENDING" && card.id)
+                  .filter((card) => card.status === "PENDING" && Number(card.expiry) > Date.now() / 1000)
                   .slice(0, 3)
                   .map((card) => (
                     <div key={card.id} className="flex items-center gap-4 rounded-lg border p-3 glass glow-border">
