@@ -5,16 +5,26 @@ GiftChain is a decentralized application (dApp) that simplifies crypto gifting. 
 ---
 
 ## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Smart Contracts](#smart-contracts)
-- [Subgraph](#subgraph)
-- [Contributing](#contributing)
-- [License](#license)
+- [GiftChain](#giftchain)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Tech Stack](#tech-stack)
+    - [Frontend](#frontend)
+    - [Backend](#backend)
+    - [Smart Contracts](#smart-contracts)
+    - [Subgraph](#subgraph)
+  - [Project Structure](#project-structure)
+  - [Installation](#installation)
+    - [Prerequisites](#prerequisites)
+    - [Steps](#steps)
+    - [Usage](#usage)
+  - [Smart Contracts](#smart-contracts-1)
+    - [Overview](#overview-1)
+    - [Key Features](#key-features)
+  - [Subgraph](#subgraph-1)
+  - [Contributing](#contributing)
+- [GiftChain project workflow](#giftchain-project-workflow)
 
 ---
 
@@ -227,3 +237,25 @@ git push origin feature/your-feature-name
 ```
 
 5. Open a pull request
+
+# GiftChain project workflow
+
+```mermaid
+    graph TD
+    A[User] -->|Connects Wallet| B[Frontend]
+    B -->|Create Gift| C{Check Allowance}
+    C -->|Sufficient Allowance| D[Backend]
+    C -->|Insufficient Allowance| E[Approve Relayer]
+    E --> D
+    D -->|Calls createGift| F[Smart Contract]
+    F -->|Generates Raw Code| D
+    D -->|Sends Raw Code| B
+    F -->|Sends Gift Data| G[Subgraph]
+    G -->|Fetches Data| H[Dashboard in Frontend]
+    A -->|Reclaim Expired Gift| I[Call reclaim Function]
+    I --> F
+    A -->|Claim Gift with Code| J[Call claim Function]
+    J --> F
+    A -->|Validate Gift Code| K[Call Validate Function]
+    K -->|Checks Gift Status| F
+```

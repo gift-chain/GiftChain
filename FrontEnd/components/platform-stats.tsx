@@ -1,68 +1,64 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Users, Gift, Wallet, TrendingUp } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Users, Gift, Wallet, TrendingUp } from "lucide-react";
 
 interface StatProps {
-  icon: React.ReactNode
-  value: number
-  label: string
-  prefix?: string
-  suffix?: string
-  duration?: number
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  prefix?: string;
+  suffix?: string;
+  duration?: number;
 }
 
 const StatCard = ({ icon, value, label, prefix = "", suffix = "", duration = 2000 }: StatProps) => {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
-    let start = 0
-    const end = value
-    const incrementTime = Math.floor(duration / end)
-    let timer: NodeJS.Timeout
-
-    // Don't run the animation if the component is not visible
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          timer = setInterval(() => {
-            start += 1
-            setCount(start)
-            if (start >= end) clearInterval(timer)
-          }, incrementTime)
-        }
-      },
-      { threshold: 0.1 },
-    )
-
-    const element = document.getElementById(`stat-${label.replace(/\s+/g, "-").toLowerCase()}`)
-    if (element) observer.observe(element)
-
+    let startTime = Date.now();
+    
+    const animateCount = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      const currentValue = Math.floor(progress * value);
+      setCount(currentValue);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateCount);
+      } else {
+        setCount(value); // Ensure we end at exactly the target value
+      }
+    };
+    
+    requestAnimationFrame(animateCount);
+    
     return () => {
-      clearInterval(timer)
-      if (element) observer.unobserve(element)
-    }
-  }, [value, label, duration])
+      setCount(value); // Set to final value on cleanup
+    };
+  }, [value, duration]);
 
   return (
-    <div className="stat-card" id={`stat-${label.replace(/\s+/g, "-").toLowerCase()}`}>
-      <div className="stat-icon">{icon}</div>
-      <div className="stat-value">
+    <div className="stat-card flex flex-col items-center p-6 bg-card rounded-lg border glow-border">
+      <div className="stat-icon mb-4 flex items-center justify-center w-12 h-12 rounded-full bg-primary bg-opacity-20">
+        {icon}
+      </div>
+      <div className="stat-value text-3xl font-bold mb-2">
         {prefix}
         <span className="counter">{count.toLocaleString()}</span>
         {suffix}
       </div>
-      <div className="stat-label">{label}</div>
+      <div className="stat-label text-muted-foreground text-sm">{label}</div>
     </div>
-  )
-}
+  );
+};
 
 export default function PlatformStats() {
   return (
-    <section className="py-16 mesh-bg">
-      <div className="container">
+    <section className="py-16 mesh-bg w-full">
+      <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4 gradient-text">Platform Statistics</h2>
           <p className="text-muted-foreground md:w-2/3 mx-auto">
@@ -84,5 +80,5 @@ export default function PlatformStats() {
         </div>
       </div>
     </section>
-  )
+  );
 }
