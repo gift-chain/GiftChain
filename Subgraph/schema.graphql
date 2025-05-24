@@ -19,6 +19,7 @@ type Gift @entity(immutable: false) {
   expiry: BigInt! # uint256
   timeCreated: BigInt! # uint256
   status: GiftStatus!
+  recipient: Bytes
   claimed: GiftClaimed @derivedFrom(field: "gift")
   reclaimed: GiftReclaimed @derivedFrom(field: "gift")
 }

@@ -56,6 +56,7 @@ export function handleGiftClaimed(event: GiftClaimedEvent): void {
   let gift = Gift.load(event.params.giftID)
   if (gift) {
     gift.status = "CLAIMED"
+    gift.recipient = event.params.recipient
     gift.save()
   }
 
@@ -76,6 +77,7 @@ export function handleGiftReclaimed(event: GiftReclaimedEvent): void {
   let gift = Gift.load(event.params.giftID)
   if (gift) {
     gift.status = "RECLAIMED"
+    gift.recipient = event.params.creator
     gift.save()
   }
 
