@@ -17,6 +17,12 @@ library GiftErrors {
     error GIFT_EXPIRED();
     error GIFT_NOT_EXPIRED_YET();
     error NOT_AUTHORIZE_TO_RECLAIM_GIFT();
+    error ARRAY_LENGTH_MISMATCH();
+    error BULK_CREATION_FAILED();
+    error ONLY_CONTRACT_HAS_ACCESS();
+    error INVALID_CREATOR();
+    error CREATOR_MISMATCH();
+    error BULK_CREATION_MUST_BE_AT_LEAST_5();
     error GiftAlreadyRedeemed();
     error GiftAlreadyReclaimed();
     error InvalidGiftStatus();
