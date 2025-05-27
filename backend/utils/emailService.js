@@ -8,13 +8,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendGiftCodeEmail = async (to, code) => {
+const sendGiftCodeEmail = async (to, { rawCode, token, amount, expiry, message }) => {
   try {
     await transporter.sendMail({
       from: `"GiftChain" <${process.env.EMAIL_USER}>`,
       to,
       subject: "Your Exclusive GiftChain Code",
-      text: `Welcome to GiftChain! Your unique gift code is: ${code}. Use it to unlock your blockchain-powered gift at GiftChain.`,
+      text: `Welcome to GiftChain! Your gift details:\nCode: ${rawCode}\nToken: ${token}\nAmount: ${amount}\nExpiry: ${new Date(expiry).toLocaleString()}\nMessage: ${message || "No message provided."}\nUse this code to unlock your blockchain-powered gift at GiftChain.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
           <!-- Header with Logo -->
@@ -27,28 +27,32 @@ const sendGiftCodeEmail = async (to, code) => {
           <div style="background-color: #ffffff; padding: 20px; margin-top: 10px; border-radius: 5px;">
             <h2 style="color: #333; font-size: 20px;">Blockchain Gifts Reimagined</h2>
             <p style="color: #555; font-size: 16px; line-height: 1.5;">
-              At GiftChain, we're revolutionizing gifting with blockchain technology. Your unique gift code unlocks a secure, transparent, and exciting gift experience powered by the blockchain. Thank you for joining us on this journey!
+              At GiftChain, we're revolutionizing gifting with blockchain technology. Your unique gift code unlocks a secure, transparent, and exciting gift experience. Thank you for joining us!
             </p>
           </div>
 
-          <!-- Code Section -->
-          <div style="text-align: center; background-color: #007bff; padding: 20px; margin: 10px 0; border-radius: 5px;">
-            <h3 style="color: #ffffff; font-size: 18px; margin: 0 0 10px;">Your Gift Code</h3>
-            <p style="font-size: 32px; font-weight: bold; color: #ffffff; background-color: #0056b3; padding: 10px 20px; border-radius: 5px; display: inline-block; letter-spacing: 2px;">
-              ${code}
+          <!-- Gift Details Section -->
+          <div style="background-color: #ffffff; padding: 20px; margin: 10px 0; border-radius: 5px;">
+            <h3 style="color: #333; font-size: 18px; margin: 0 0 10px;">Your Gift Details</h3>
+            <p style="font-size: 32px; font-weight: bold; color: #007bff; background-color: #e9ecef; padding: 10px 20px; border-radius: 5px; text-align: center; letter-spacing: 2px;">
+              ${rawCode}
             </p>
+            <p style="color: #555; font-size: 16px; margin: 10px 0;"><strong>Token:</strong> ${token}</p>
+            <p style="color: #555; font-size: 16px; margin: 10px 0;"><strong>Amount:</strong> ${amount}</p>
+            <p style="color: #555; font-size: 16px; margin: 10px 0;"><strong>Expiry:</strong> ${new Date(expiry).toLocaleString()}</p>
+            ${message ? `<p style="color: #555; font-size: 16px; margin: 10px 0;"><strong>Message:</strong> ${message}</p>` : ""}
           </div>
 
           <!-- Instructions -->
           <div style="background-color: #ffffff; padding: 20px; border-radius: 5px;">
             <p style="color: #555; font-size: 16px; line-height: 1.5;">
-              Use this code to redeem your gift on the GiftChain platform. Simply visit our website and enter the code to unlock your blockchain-powered gift. If you have any questions, contact our support team at <a href="mailto:support@giftchain.com" style="color: #007bff; text-decoration: none;">support@giftchain.com</a>.
+              Use this code to redeem your gift on the GiftChain platform. Visit our website <a>https://gift-chain.vercel.app/</a> and enter the code to unlock your blockchain-powered gift. For support, contact us at <a href="mailto:support@giftchain.com" style="color: #007bff; text-decoration: none;">support@giftchain.com</a>.
             </p>
           </div>
 
           <!-- Footer -->
           <div style="text-align: center; padding: 20px; font-size: 14px; color: #777;">
-            <p>&copy; ${new Date().getFullYear()} GiftChain. All rights reserved.</p>
+            <p>© ${new Date().getFullYear()} GiftChain. All rights reserved.</p>
             <p><a href="https://giftchain.com" style="color: #007bff; text-decoration: none;">Visit GiftChain</a> | <a href="mailto:support@giftchain.com" style="color: #007bff; text-decoration: none;">Contact Us</a></p>
           </div>
         </div>

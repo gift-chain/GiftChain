@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { createCode, sendGiftEmails } = require("../controllers/codeController");
+const { createCode, bulkCreateCodes } = require("../controllers/codeController");
 const {createGift, downloadGiftCard} = require("../controllers/createGiftController");
 const giftCode = require("../models/Gift.js");
 
 router.post("/generate-code", createCode);
-router.post("/send-gift-emails", sendGiftEmails);
+router.post("/bulk-create", bulkCreateCodes);
 
 router.post("/create-gift", createGift)
 router.get("/download/:fileName", downloadGiftCard);

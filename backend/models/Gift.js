@@ -23,6 +23,11 @@ const codeSchema = new mongoose.Schema({
     required: true
    },
 
+   email: {
+      type: String,
+      required: true
+   },
+
    amount: {
       type: String,
       required: true
