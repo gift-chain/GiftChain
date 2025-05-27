@@ -4,7 +4,13 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const { ALCHEMY_SEPOLIA_RPC_URL, PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
+const { 
+    ALCHEMY_SEPOLIA_RPC_URL, 
+    ALCHEMY_BASE_RPC_URL, 
+    PRIVATE_KEY, 
+    ETHERSCAN_API_KEY,
+    BASE_SEPOLIA_API_KEY
+  } = process.env;
 
 // Ensure environment variables are defined, or provide fallback for local testing
 const sepoliaConfig = ALCHEMY_SEPOLIA_RPC_URL && PRIVATE_KEY ? {
@@ -29,10 +35,15 @@ const config: HardhatUserConfig = {
       chainId: 31337,
     },
     ...(sepoliaConfig ? { sepolia: sepoliaConfig } : {}), // Include sepolia only if configured
+    base: {
+      url: ALCHEMY_BASE_RPC_URL,
+      accounts: [`0x${PRIVATE_KEY}`]
+    }
   },
   etherscan: {
     apiKey: {
-      sepolia: ETHERSCAN_API_KEY || "", // Fallback to empty string if undefined
+      sepolia: ETHERSCAN_API_KEY || "", 
+      baseSepolia: BASE_SEPOLIA_API_KEY!
     },
   },
 };
