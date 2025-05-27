@@ -22,4 +22,13 @@ library GiftErrors {
     error InvalidGiftStatus();
     error GiftNotFound();
     error GiftExpired();
+
+
+    // Added this new errors
+    error BULK_CREATION_MUST_BE_AT_LEAST_5();
+    error ARRAY_LENGTH_MISMATCH();
+    error CREATOR_MISMATCH();
+    error BULK_CREATION_FAILED();
+    error ONLY_CONTRACT_HAS_ACCESS();
+    error INSUFFICIENT_BALANCE();
 }
