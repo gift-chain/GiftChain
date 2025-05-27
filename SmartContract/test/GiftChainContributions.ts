@@ -1,129 +1,210 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import {
-  GiftChain,
-  GiftChain__factory,
-  ERC20Mock,
-  ERC20Mock__factory
-} from "../typechain-types";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { Contract, Signer } from "ethers";
 
-describe("GiftChain - Contribution Functions", function () {
-  let GiftChain: GiftChain__factory;
-  let giftChain: GiftChain;
-  let owner: SignerWithAddress;
-  let relayer: SignerWithAddress;
-  let contributor1: SignerWithAddress;
-  let contributor2: SignerWithAddress;
-  let creator: SignerWithAddress;
+describe("GiftChain - Contribution Tests", function () {
+  let giftChain: Contract;
+  let mockToken: Contract;
+  let owner: Signer;
+  let relayer: Signer;
+  let user1: Signer;
+  let user2: Signer;
+  let user3: Signer;
 
-  let TestToken: ERC20Mock__factory;
-  let testToken: ERC20Mock;
+  const oneDay = 24 * 60 * 60;
+  const testMessage = "Happy Birthday!";
+  let testGiftID: string;
+  let creatorHash: string;
 
-  const creatorId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("creator1"));
+  beforeEach(async function () {
+    [owner, relayer, user1, user2, user3] = await ethers.getSigners();
 
-  before(async function () {
-    [owner, relayer, contributor1, contributor2, creator] = await ethers.getSigners();
+    const MockToken = await ethers.getContractFactory("MockERC20");
+    mockToken = await MockToken.deploy("Mock Token", "MTK", ethers.parseEther("1000000"));
+    await mockToken.waitForDeployment();
 
-    // Deploy test ERC20 token
-    TestToken = await ethers.getContractFactory("ERC20Mock");
-    testToken = await TestToken.deploy("Test Token", "TEST", owner.address, ethers.utils.parseEther("1000"));
-    await testToken.deployed();
+    testGiftID = ethers.keccak256(ethers.toUtf8Bytes("test-gift-" + Math.random().toString()));
+    creatorHash = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
 
-    // Deploy GiftChain
-    GiftChain = await ethers.getContractFactory("GiftChain");
-    giftChain = await GiftChain.deploy(relayer.address);
-    await giftChain.deployed();
+    // Distribute tokens
+    await mockToken.transfer(await relayer.getAddress(), ethers.parseEther("10000"));
+    await mockToken.transfer(await user1.getAddress(), ethers.parseEther("1000"));
+    await mockToken.transfer(await user2.getAddress(), ethers.parseEther("1000"));
+    await mockToken.transfer(await user3.getAddress(), ethers.parseEther("1000"));
 
-    // Fund contributors with test tokens
-    await testToken.connect(owner).transfer(contributor1.address, ethers.utils.parseEther("100"));
-    await testToken.connect(owner).transfer(contributor2.address, ethers.utils.parseEther("100"));
+    const GiftChain = await ethers.getContractFactory("GiftChain");
+    giftChain = await GiftChain.deploy(await relayer.getAddress());
+    await giftChain.waitForDeployment();
+
+    // Approvals
+    await mockToken.connect(relayer).approve(giftChain.getAddress(), ethers.MaxUint256);
+    await mockToken.connect(user1).approve(giftChain.getAddress(), ethers.MaxUint256);
+    await mockToken.connect(user2).approve(giftChain.getAddress(), ethers.MaxUint256);
+    await mockToken.connect(user3).approve(giftChain.getAddress(), ethers.MaxUint256);
+
+    // Create a test gift for some tests
+    await giftChain.connect(relayer).createGift(
+      await mockToken.getAddress(),
+      ethers.parseEther("100"),
+      (await time.latest()) + oneDay,
+      testMessage,
+      testGiftID,
+      creatorHash
+    );
   });
 
-  describe("contribute()", function () {
-    it("Should allow contributions to a creator's pool", async function () {
-      const amount = ethers.utils.parseEther("10");
-
-      await testToken.connect(contributor1).approve(giftChain.address, amount);
-      await expect(giftChain.connect(contributor1).contribute(testToken.address, amount, creatorId))
+  describe("Contribution Functionality", function () {
+    it("should allow contributions to a creator's pool", async function () {
+      const contributionAmount = ethers.parseEther("50");
+      
+      await expect(giftChain.connect(user2).contribute(
+        await mockToken.getAddress(),
+        contributionAmount,
+        creatorHash
+      ))
         .to.emit(giftChain, "ContributionAdded")
-        .withArgs(creatorId, contributor1.address, testToken.address, amount);
+        .withArgs(creatorHash, await user2.getAddress(), await mockToken.getAddress(), contributionAmount);
 
-      expect(await giftChain.creatorContributions(creatorId)).to.equal(amount);
-      expect(await giftChain.contributorBalances(creatorId, contributor1.address)).to.equal(amount);
+      // Verify balances updated
+      expect(await giftChain.creatorContributions(creatorHash)).to.equal(contributionAmount);
+      expect(await giftChain.contributorBalances(creatorHash, await user2.getAddress())).to.equal(contributionAmount);
     });
 
-    it("Should reject invalid contributions", async function () {
-      const amount = ethers.utils.parseEther("1");
-
+    it("should reject zero amount contributions", async function () {
       await expect(
-        giftChain.connect(contributor1).contribute(ethers.constants.AddressZero, amount, creatorId)
-      ).to.be.revertedWith("INVALID_ADDRESS");
-
-      await expect(
-        giftChain.connect(contributor1).contribute(testToken.address, 0, creatorId)
-      ).to.be.revertedWith("INVALID_AMOUNT");
+        giftChain.connect(user2).contribute(
+          await mockToken.getAddress(),
+          0,
+          creatorHash
+        )
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_AMOUNT");
     });
-  });
 
-  describe("withdrawContribution()", function () {
-    before(async function () {
-      // Create a gift first to set the token
-      const giftId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("gift1"));
-      const amount = ethers.utils.parseEther("5");
-      await testToken.connect(creator).approve(giftChain.address, amount);
+    it("should reject invalid token contributions", async function () {
+      await expect(
+        giftChain.connect(user2).contribute(
+          ethers.ZeroAddress,
+          ethers.parseEther("50"),
+          creatorHash
+        )
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_ADDRESS");
+    });
+
+    it("should allow multiple contributors", async function () {
+      const amount1 = ethers.parseEther("30");
+      const amount2 = ethers.parseEther("70");
+
+      await giftChain.connect(user2).contribute(await mockToken.getAddress(), amount1, creatorHash);
+      await giftChain.connect(user3).contribute(await mockToken.getAddress(), amount2, creatorHash);
+
+      expect(await giftChain.creatorContributions(creatorHash)).to.equal(amount1 + amount2);
+      expect(await giftChain.contributorBalances(creatorHash, await user2.getAddress())).to.equal(amount1);
+      expect(await giftChain.contributorBalances(creatorHash, await user3.getAddress())).to.equal(amount2);
+    });
+
+    it("should allow partial withdrawals", async function () {
+      const contributeAmount = ethers.parseEther("100");
+      const withdrawAmount = ethers.parseEther("40");
+
+      await giftChain.connect(user2).contribute(await mockToken.getAddress(), contributeAmount, creatorHash);
+
+      const user2BalanceBefore = await mockToken.balanceOf(await user2.getAddress());
+      await giftChain.connect(user2).withdrawContribution(creatorHash, withdrawAmount);
+      const user2BalanceAfter = await mockToken.balanceOf(await user2.getAddress());
+
+      expect(user2BalanceAfter - user2BalanceBefore).to.equal(withdrawAmount);
+      expect(await giftChain.contributorBalances(creatorHash, await user2.getAddress())).to.equal(contributeAmount - withdrawAmount);
+    });
+
+    it("should reject over-withdrawal attempts", async function () {
+      await giftChain.connect(user2).contribute(await mockToken.getAddress(), ethers.parseEther("50"), creatorHash);
+      
+      await expect(
+        giftChain.connect(user2).withdrawContribution(creatorHash, ethers.parseEther("51"))
+      ).to.be.revertedWithCustomError(giftChain, "INSUFFICIENT_BALANCE");
+    });
+
+    it("should reject withdrawals for non-contributors", async function () {
+      await expect(
+        giftChain.connect(user3).withdrawContribution(creatorHash, ethers.parseEther("10"))
+      ).to.be.revertedWithCustomError(giftChain, "INSUFFICIENT_BALANCE");
+    });
+
+    it("should use contributed funds for gift creation", async function () {
+      // Contribute funds first
+      const contributionAmount = ethers.parseEther("200");
+      await giftChain.connect(user2).contribute(await mockToken.getAddress(), contributionAmount, creatorHash);
+
+      // Create gift without transferring tokens (using contributions)
+      const newGiftID = ethers.keccak256(ethers.toUtf8Bytes("contribution-gift"));
+      const giftAmount = ethers.parseEther("150");
+
       await giftChain.connect(relayer).createGift(
-        testToken.address,
-        amount,
-        Math.floor(Date.now() / 1000) + 3600,
-        "Test gift",
-        giftId,
-        creatorId
-      );
-    });
-
-    it("Should allow withdrawing unused contributions", async function () {
-      const amount = ethers.utils.parseEther("5");
-
-      await expect(giftChain.connect(contributor1).withdrawContribution(creatorId, amount))
-        .to.emit(giftChain, "ContributionWithdrawn")
-        .withArgs(creatorId, contributor1.address, amount);
-
-      expect(await giftChain.creatorContributions(creatorId)).to.equal(ethers.utils.parseEther("5"));
-      expect(await giftChain.contributorBalances(creatorId, contributor1.address)).to.equal(ethers.utils.parseEther("5"));
-    });
-
-    it("Should reject invalid withdrawals", async function () {
-      await expect(
-        giftChain.connect(contributor1).withdrawContribution(creatorId, ethers.utils.parseEther("100"))
-      ).to.be.revertedWith("INSUFFICIENT_BALANCE");
-
-      const unknownCreator = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("unknown"));
-      await expect(
-        giftChain.connect(contributor1).withdrawContribution(unknownCreator, ethers.utils.parseEther("1"))
-      ).to.be.revertedWith("GiftNotFound");
-    });
-  });
-
-  describe("Integration", function () {
-    it("Should let creators use contributed funds for gifts", async function () {
-      const contributionAmount = ethers.utils.parseEther("20");
-      const giftAmount = ethers.utils.parseEther("15");
-
-      await testToken.connect(contributor2).approve(giftChain.address, contributionAmount);
-      await giftChain.connect(contributor2).contribute(testToken.address, contributionAmount, creatorId);
-
-      const giftId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("gift2"));
-      await giftChain.connect(relayer).createGift(
-        testToken.address,
+        await mockToken.getAddress(),
         giftAmount,
-        Math.floor(Date.now() / 1000) + 3600,
-        "Pool-funded gift",
-        giftId,
-        creatorId
+        (await time.latest()) + oneDay,
+        "Funded by contributions",
+        newGiftID,
+        creatorHash
       );
 
-      expect(await giftChain.creatorContributions(creatorId)).to.equal(ethers.utils.parseEther("5"));
+      // Verify balances
+      expect(await giftChain.creatorContributions(creatorHash)).to.equal(contributionAmount - giftAmount);
+    });
+  });
+
+  describe("Integration with Existing Features", function () {
+    it("should allow gift claiming after contribution-funded creation", async function () {
+      // Setup
+      const contributionAmount = ethers.parseEther("100");
+      const newGiftID = ethers.keccak256(ethers.toUtf8Bytes("contribution-claim-gift"));
+
+      // 1. Contribute
+      await giftChain.connect(user2).contribute(await mockToken.getAddress(), contributionAmount, creatorHash);
+
+      // 2. Create gift using contributions
+      await giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        contributionAmount,
+        (await time.latest()) + oneDay,
+        "Funded by user2",
+        newGiftID,
+        creatorHash
+      );
+
+      // 3. Claim gift
+      await expect(giftChain.connect(user3).claimGift(newGiftID))
+        .to.emit(giftChain, "GiftClaimed")
+        .withArgs(newGiftID, await user3.getAddress(), contributionAmount, "CLAIMED");
+    });
+
+    it("should handle partial contributions and direct funding", async function () {
+      // Scenario: Creator has 50 ETH in contributions but wants to make 100 ETH gift
+      const contributionAmount = ethers.parseEther("50");
+      const giftAmount = ethers.parseEther("100");
+      const newGiftID = ethers.keccak256(ethers.toUtf8Bytes("mixed-funding-gift"));
+
+      // 1. Get contributions
+      await giftChain.connect(user2).contribute(await mockToken.getAddress(), contributionAmount, creatorHash);
+
+      // 2. Create gift (should use 50 from contributions + pull 50 from relayer)
+      const relayerBalanceBefore = await mockToken.balanceOf(await relayer.getAddress());
+      
+      await giftChain.connect(relayer).createGift(
+        await mockToken.getAddress(),
+        giftAmount,
+        (await time.latest()) + oneDay,
+        "Mixed funding gift",
+        newGiftID,
+        creatorHash
+      );
+
+      const relayerBalanceAfter = await mockToken.balanceOf(await relayer.getAddress());
+      
+      // Verify only 50 was pulled from relayer (50 came from contributions)
+      expect(relayerBalanceBefore - relayerBalanceAfter).to.equal(ethers.parseEther("50"));
+      expect(await giftChain.creatorContributions(creatorHash)).to.equal(0);
     });
   });
 });

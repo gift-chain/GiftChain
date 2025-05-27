@@ -303,15 +303,12 @@ contract GiftChain is ReentrancyGuard {
         );
     }
 
-    
+  }
 
 
 
 
      // NEW: CONTRIBUTION FUNCTIONS (ADDED BELOW)
-
-
-
   function contribute(
     address _token,
     uint256 _amount,
@@ -350,5 +347,5 @@ contract GiftChain is ReentrancyGuard {
     emit ContributionWithdrawn(_creator, msg.sender, _amount);
   }
 
-  }
+  
 }
