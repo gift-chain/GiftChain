@@ -1,13 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const { createCode, bulkCreateCodes } = require("../controllers/codeController");
-const {createGift, downloadGiftCard} = require("../controllers/createGiftController");
+
+const { createCode, sendGiftEmails } = require("../controllers/codeController");
+const {createGift, downloadGiftCard, getGiftCodes} = require("../controllers/createGiftController");
+
 const giftCode = require("../models/Gift.js");
 
 router.post("/generate-code", createCode);
 router.post("/bulk-create", bulkCreateCodes);
 
 router.post("/create-gift", createGift)
+router.post("/gift-codes", getGiftCodes);
 router.get("/download/:fileName", downloadGiftCard);
 
 router.get("/gift/:hashedCode", async (req, res) => {

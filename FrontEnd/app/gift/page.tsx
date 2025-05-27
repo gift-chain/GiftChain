@@ -21,6 +21,7 @@ import CreateGiftCard from "../create/page"
 import ValidateGiftCard from "../validateGift/page"
 import ClaimGiftCard from "../claim/page"
 import ReclaimGift from "../reclaimGift/page"
+import CreateBulkCard from "../bulkCreate/page"
 
 interface GiftForm {
     token: string;
@@ -236,7 +237,7 @@ export default function GiftCard() {
             </Button>
 
             {/* switching button  */}
-            <div className="grid place-content-center translate-x-20 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+            <div className="grid place-content-center -translate-x-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
 
                 <Button className={`${btn == "0" ? "bg-[#289a67]" : "bg-transparent border-2 border-[#289a67]"} hover:bg-[#289a67] shadow-lg gap-2`} size="default" onClick={() => setBtn("0")}>
                     <Zap className="h-5 w-5" />
@@ -256,6 +257,11 @@ export default function GiftCard() {
                     <Zap className="h-5 w-5" />
                     Reclaim
                 </Button>
+
+                <Button className={`${btn == "4" ? "bg-[#289a67]" : "bg-transparent border-2 border-[#289a67]"} hover:bg-[#289a67] shadow-lg gap-2`} size="default" onClick={() => setBtn("4")}>
+                    <Zap className="h-5 w-5" />
+                    Bulk Create
+                </Button>
             </div>
 
             <div className="mb-8">
@@ -264,12 +270,14 @@ export default function GiftCard() {
                     {btn == "1" && "Validate Gift"}
                     {btn == "2" && "Claim Gift"}
                     {btn == "3" && "Reclaim Expired Gift"}
+                    {btn == "4" && "Bulk Create Gift"}
                 </h1>
                 <p className="text-muted-foreground">
                     {btn == "0" && "Fill in the details below to create a new blockchain gift."}
                     {btn == "1" && "Fill in your details to validate your gift."}
                     {btn == "2" && "Fill in your details to claim your gift"}
                     {btn == "3" && "Fill in your expired details to reclaim your gift"}
+                    {btn == "4" && "Fill in the details below to create bulk gift"}
 
 
                 </p>
@@ -283,6 +291,7 @@ export default function GiftCard() {
                 {btn == "1" && <ValidateGiftCard />}
                 {btn == "2" && <ClaimGiftCard />}
                 {btn == "3" && <ReclaimGift />}
+                {btn == "4" && <CreateBulkCard/>}
 
             </div>
         </div>

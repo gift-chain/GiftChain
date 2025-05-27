@@ -89,13 +89,6 @@ export default function ClaimGiftCard() {
                 }
             }
 
-            if (gift.status != 1) {
-                return {
-                    isValid: false,
-                    message: "This gift has an invalid status.",
-                }
-            }
-
             const block = await provider.getBlock("latest")
             if (!block) {
                 return {
@@ -115,6 +108,13 @@ export default function ClaimGiftCard() {
                 return {
                     isValid: false,
                     message: "This gift has already been claimed.",
+                }
+            }
+
+            if (gift.status != 1) {
+                return {
+                    isValid: false,
+                    message: "This gift has an invalid status.",
                 }
             }
 
