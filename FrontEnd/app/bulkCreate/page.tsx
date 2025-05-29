@@ -241,7 +241,7 @@ export default function CreateBulkCard() {
     }
 
     // Step 1: Generate gift codes from backend
-    const backendResponse = await fetch('http://localhost:4000/api/bulk-create', {
+    const backendResponse = await fetch('https://gift-chain-w3lp.vercel.app/api/bulk-create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

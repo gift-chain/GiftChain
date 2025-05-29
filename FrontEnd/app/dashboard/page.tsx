@@ -401,8 +401,7 @@ export default function Dashboard() {
       if (!idsToFetch.length) return;
   
       axios
-        // .post('https://gift-chain-w3lp.vercel.app/api/gift-codes', { ids: idsToFetch })
-        .post('http://localhost:4000/api/gift-codes', { ids: idsToFetch })
+        .post('https://gift-chain-w3lp.vercel.app/api/gift-codes', { ids: idsToFetch })
         .then((res: { data: Record<string, Record<string, string>> }) => {
           const {data} = res; 
           setGiftIdCodes((prev) => ({ ...prev, ...data.data }));
