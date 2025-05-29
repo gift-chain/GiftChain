@@ -18,6 +18,11 @@ const sepoliaConfig = ALCHEMY_SEPOLIA_RPC_URL && PRIVATE_KEY ? {
   accounts: [`0x${PRIVATE_KEY.replace(/^0x/, "")}`], // Remove '0x' if present
 } : undefined;
 
+const baseConfig = ALCHEMY_BASE_RPC_URL && PRIVATE_KEY ? {
+  url: ALCHEMY_BASE_RPC_URL,
+  accounts: [`0x${PRIVATE_KEY.replace(/^0x/, "")}`], // Remove '0x' if present
+} : undefined;
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.28",
@@ -35,18 +40,14 @@ const config: HardhatUserConfig = {
       chainId: 31337,
     },
     ...(sepoliaConfig ? { sepolia: sepoliaConfig } : {}), // Include sepolia only if configured
-    base: {
-      url: ALCHEMY_BASE_RPC_URL,
-      accounts: [`0x${PRIVATE_KEY}`]
-    }
+    ...(baseConfig ? { base: baseConfig } : {}), // Include base only if configured
   },
   etherscan: {
     apiKey: {
       sepolia: ETHERSCAN_API_KEY || "", 
-      baseSepolia: BASE_SEPOLIA_API_KEY!
+      baseSepolia: BASE_SEPOLIA_API_KEY || ""
     },
   },
 };
 
 export default config;
-

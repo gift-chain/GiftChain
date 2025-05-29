@@ -1,13 +1,20 @@
 const express = require("express");
 const router = express.Router();
+const cors = require('cors');
 
-const { createCode, sendGiftEmails } = require("../controllers/codeController");
+const { createCode, bulkCreateCodes } = require("../controllers/codeController");
 const {createGift, downloadGiftCard, getGiftCodes} = require("../controllers/createGiftController");
 
 const giftCode = require("../models/Gift.js");
 
+router.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+}));
+
 router.post("/generate-code", createCode);
-router.post("/send-gift-emails", sendGiftEmails);
+router.post("/bulk-create", bulkCreateCodes);
 
 router.post("/create-gift", createGift)
 router.post("/gift-codes", getGiftCodes);
