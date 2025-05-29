@@ -12,7 +12,7 @@ import GiftChainABI from "../../abi/GiftChain.json"
 import erc20ABI from "../../abi/erc20ABI.json"
 import { useAccount, useWalletClient } from "wagmi"
 
-const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"
+const CONTRACT_ADDRESS = "0x280593931820aBA367dB060162cA03CD59EC29c9"
 const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/uoHUh-NxGIzghN1job_SDZjGuQQ7snrT"
 
 interface ValidationErrors {

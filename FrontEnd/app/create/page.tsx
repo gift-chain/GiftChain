@@ -165,7 +165,8 @@ export default function CreateGiftCard() {
       console.log("loading...", isLoading)
       console.log("form => ", form)
       const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
-      const response = await axios.post('https://gift-chain-w3lp.vercel.app/api/create-gift', {
+      // const response = await axios.post('https://gift-chain-w3lp.vercel.app/api/create-gift', {
+      const response = await axios.post('http://localhost:4000/api/create-gift', {
         token: tokenAddress,
         amount: form.amount,
         expiry: expiryTimestamp,

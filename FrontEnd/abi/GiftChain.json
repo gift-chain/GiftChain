@@ -1,373 +1,474 @@
 [
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_relayer",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [],
-    "name": "CARD_ALREADY_EXIST",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "CREATOR_CANNOT_CLAIM_GIFT",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "EXPECT_3_TO_50_MESSAGE_CHARACTER",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "EXPIRY_CAN_ONLY_BE_IN_FUTURE",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "GIFT_CLAIMED",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "GIFT_EXPIRED",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "GIFT_NOT_CLAIMABLE",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "GIFT_NOT_EXPIRED_YET",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "GiftAlreadyReclaimed",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "GiftAlreadyRedeemed",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "GiftNotFound",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "INVALID_ADDRESS",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "INVALID_AMOUNT",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "INVALID_GIFTID",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NOT_AUTHORIZE_TO_RECLAIM_GIFT",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ONLY_RELAYER_HAS_ACCESS",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ReentrancyGuardReentrantCall",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "SafeERC20FailedOperation",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "TRANSFER_FAILED",
-    "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "giftID",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "name": "GiftClaimed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "giftID",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "creator",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "message",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "expiry",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timeCreated",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "name": "GiftCreated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "giftID",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "name": "GiftReclaimed",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "giftID",
-        "type": "bytes32"
-      }
-    ],
-    "name": "claimGift",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_token",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_expiry",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_message",
-        "type": "string"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "_giftID",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "_creator",
-        "type": "bytes32"
-      }
-    ],
-    "name": "createGift",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "name": "gifts",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "claimed",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "expiry",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "timeCreated",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "message",
-        "type": "string"
-      },
-      {
-        "internalType": "enum GiftChain.Status",
-        "name": "status",
-        "type": "uint8"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "creator",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "giftID",
-        "type": "bytes32"
-      }
-    ],
-    "name": "reclaimGift",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "giftID",
-        "type": "bytes32"
-      }
-    ],
-    "name": "validateGift",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "isValid",
-        "type": "bool"
-      },
-      {
-        "internalType": "string",
-        "name": "message",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_relayer",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "ARRAY_LENGTH_MISMATCH",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "BULK_CREATION_FAILED",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "BULK_CREATION_MUST_BE_AT_LEAST_5",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "CARD_ALREADY_EXIST",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "CREATOR_CANNOT_CLAIM_GIFT",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "CREATOR_MISMATCH",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "EXPECT_3_TO_50_MESSAGE_CHARACTER",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "EXPIRY_CAN_ONLY_BE_IN_FUTURE",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GIFT_CLAIMED",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GIFT_EXPIRED",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GIFT_NOT_CLAIMABLE",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GIFT_NOT_EXPIRED_YET",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GiftAlreadyReclaimed",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GiftAlreadyRedeemed",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GiftNotFound",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "INVALID_ADDRESS",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "INVALID_AMOUNT",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "INVALID_GIFTID",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "NOT_AUTHORIZE_TO_RECLAIM_GIFT",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "ONLY_CONTRACT_HAS_ACCESS",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "ONLY_RELAYER_HAS_ACCESS",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "ReentrancyGuardReentrantCall",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			}
+		],
+		"name": "SafeERC20FailedOperation",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "TRANSFER_FAILED",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "giftID",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "recipient",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "status",
+				"type": "string"
+			}
+		],
+		"name": "GiftClaimed",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "giftID",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "creator",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "expiry",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timeCreated",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "status",
+				"type": "string"
+			}
+		],
+		"name": "GiftCreated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "giftID",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "recipient",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "status",
+				"type": "string"
+			}
+		],
+		"name": "GiftReclaimed",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_amounts",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_expiries",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "string[]",
+				"name": "_messages",
+				"type": "string[]"
+			},
+			{
+				"internalType": "bytes32[]",
+				"name": "_giftIDs",
+				"type": "bytes32[]"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "_creator",
+				"type": "bytes32"
+			}
+		],
+		"name": "_createBulkGifts",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "giftID",
+				"type": "bytes32"
+			}
+		],
+		"name": "claimGift",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_amounts",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_expiries",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "string[]",
+				"name": "_messages",
+				"type": "string[]"
+			},
+			{
+				"internalType": "bytes32[]",
+				"name": "_giftIDs",
+				"type": "bytes32[]"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "_creator",
+				"type": "bytes32"
+			}
+		],
+		"name": "createBulkGifts",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_expiry",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_message",
+				"type": "string"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "_giftID",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "_creator",
+				"type": "bytes32"
+			}
+		],
+		"name": "createGift",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "gifts",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "claimed",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "expiry",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "timeCreated",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			},
+			{
+				"internalType": "enum GiftChain.Status",
+				"name": "status",
+				"type": "uint8"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "creator",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "giftID",
+				"type": "bytes32"
+			}
+		],
+		"name": "reclaimGift",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "giftID",
+				"type": "bytes32"
+			}
+		],
+		"name": "validateGift",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "isValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
 ]

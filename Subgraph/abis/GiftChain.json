@@ -12,12 +12,32 @@
 	},
 	{
 		"inputs": [],
+		"name": "ARRAY_LENGTH_MISMATCH",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "BULK_CREATION_FAILED",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "BULK_CREATION_MUST_BE_AT_LEAST_5",
+		"type": "error"
+	},
+	{
+		"inputs": [],
 		"name": "CARD_ALREADY_EXIST",
 		"type": "error"
 	},
 	{
 		"inputs": [],
 		"name": "CREATOR_CANNOT_CLAIM_GIFT",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "CREATOR_MISMATCH",
 		"type": "error"
 	},
 	{
@@ -82,12 +102,12 @@
 	},
 	{
 		"inputs": [],
-		"name": "InvalidGiftStatus",
+		"name": "NOT_AUTHORIZE_TO_RECLAIM_GIFT",
 		"type": "error"
 	},
 	{
 		"inputs": [],
-		"name": "NOT_AUTHORIZE_TO_RECLAIM_GIFT",
+		"name": "ONLY_CONTRACT_HAS_ACCESS",
 		"type": "error"
 	},
 	{
@@ -136,6 +156,12 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "status",
+				"type": "string"
 			}
 		],
 		"name": "GiftClaimed",
@@ -185,6 +211,12 @@
 				"internalType": "uint256",
 				"name": "timeCreated",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "status",
+				"type": "string"
 			}
 		],
 		"name": "GiftCreated",
@@ -202,7 +234,7 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "creator",
+				"name": "recipient",
 				"type": "address"
 			},
 			{
@@ -210,10 +242,54 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "status",
+				"type": "string"
 			}
 		],
 		"name": "GiftReclaimed",
 		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_amounts",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_expiries",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "string[]",
+				"name": "_messages",
+				"type": "string[]"
+			},
+			{
+				"internalType": "bytes32[]",
+				"name": "_giftIDs",
+				"type": "bytes32[]"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "_creator",
+				"type": "bytes32"
+			}
+		],
+		"name": "_createBulkGifts",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -224,6 +300,44 @@
 			}
 		],
 		"name": "claimGift",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_amounts",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_expiries",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "string[]",
+				"name": "_messages",
+				"type": "string[]"
+			},
+			{
+				"internalType": "bytes32[]",
+				"name": "_giftIDs",
+				"type": "bytes32[]"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "_creator",
+				"type": "bytes32"
+			}
+		],
+		"name": "createBulkGifts",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -264,30 +378,6 @@
 		"name": "createGift",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "creatorGifts",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -369,8 +459,13 @@
 		"outputs": [
 			{
 				"internalType": "bool",
-				"name": "",
+				"name": "isValid",
 				"type": "bool"
+			},
+			{
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
 			}
 		],
 		"stateMutability": "view",

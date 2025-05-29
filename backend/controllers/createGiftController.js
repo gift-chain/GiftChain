@@ -11,7 +11,7 @@ const GiftCode = require("../models/Gift.js"); // Import Mongoose model
 
 
 // Initialize provider and contracts
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
 const relayer = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
 const giftChain = new ethers.Contract(process.env.GIFTCHAIN_ADDRESS, giftAbi, relayer);
 
