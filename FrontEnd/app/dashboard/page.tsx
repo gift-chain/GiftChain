@@ -718,23 +718,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  if (giftsLoading || claimedLoading || reclaimedLoading || isLoading) {
-    return (
-      <div className="container flex items-center justify-center min-h-screen hexagon-bg text-foreground">
-        <Spinner size="lg" /> 
-        {/* <p className="mt-4 text-green-500 font-medium">Loading your dashboard...</p> */}
-      </div>
-    );
-  }
-
-  if (giftsError || claimedError || reclaimedError) {
-    return (
-      <div className="container flex items-center justify-center min-h-screen hexagon-bg text-red-500">
-        Error: {giftsError?.message || claimedError?.message || reclaimedError?.message}
-      </div>
-    );
-  }
         
   return (
     <div className="container px-4 py-8 hexagon-bg">
