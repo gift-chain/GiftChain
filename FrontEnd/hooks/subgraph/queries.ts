@@ -84,3 +84,31 @@ export const GET_GIFTS = gql`
     }
   }
 `;
+
+export const GET_SINGLE_USER_GIFTS = gql`
+  query GetSingleUserGifts($creator: Bytes!, $address: Bytes!) {
+    gifts(where: {
+    or: [
+      { creator: $creator }, 
+      { recipient: $address }
+    ]}, orderBy: timeCreated, orderDirection: desc) {
+      id
+      token
+      message
+      status
+      recipient
+      amount
+      expiry
+      timeCreated
+      creator {
+        id
+      }
+      claimed {
+        blockTimestamp
+      }
+      reclaimed {
+        blockTimestamp
+      }
+    }
+  }
+`;

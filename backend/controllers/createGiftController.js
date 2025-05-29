@@ -11,12 +11,68 @@ const GiftCode = require("../models/Gift.js"); // Import Mongoose model
 
 
 // Initialize provider and contracts
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
 const relayer = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
 const giftChain = new ethers.Contract(process.env.GIFTCHAIN_ADDRESS, giftAbi, relayer);
 
 // Cache for token approvals
 const approvedTokens = new Set();
+
+const getGiftCodes = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    // Validate input
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of gift IDs'
+      });
+    }
+
+    const normalizedIds = ids.map(id => id.toLowerCase());
+    // giftID  hashedCode,
+
+    // MongoDB's $in operator is used for efficient batch querying
+    const gifts = await GiftCode.find(
+      { 
+        hashedCode: { $in: normalizedIds }
+      },
+      {
+        giftID: 1,
+        hashedCode: 1,
+        _id: 0 // Exclude _id field from results
+      }
+    )
+    // .collation({ locale: 'en', strength: 2 }) // Make query case-insensitive
+    .lean(); // lean() is used for better performance when we don't need Mongoose documents
+
+    // Create a map for O(1) lookup
+    const giftMap = gifts.reduce((acc, gift) => {
+      acc[gift.hashedCode] = gift.giftID;
+      return acc;
+    }, {});
+
+    // Ensure all requested IDs are in the response, even if not found
+    const response = normalizedIds.reduce((acc, hashedCode) => {
+      acc[hashedCode] = giftMap[hashedCode] || null;
+      return acc;
+    }, {});
+
+    return res.status(200).json({
+      success: true,
+      data: response
+    });
+
+  } catch (error) {
+    console.error('Error fetching gift codes:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
 
 // Function to approve token with max uint256
 async function approveToken(tokenAddress, spender) {
@@ -605,4 +661,4 @@ const downloadGiftCard = (req, res) => {
   });
 };
 
-module.exports = { createGift, downloadGiftCard };
+module.exports = { createGift, downloadGiftCard, getGiftCodes };

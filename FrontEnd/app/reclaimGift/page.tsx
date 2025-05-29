@@ -14,7 +14,8 @@ import { useAccount, useWalletClient } from "wagmi"
 import { GET_GIFTS } from "../../hooks/subgraph/queries";
 import { useQuery } from "@apollo/client"
 
-const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"
+// const CONTRACT_ADDRESS = process.env.NEXT_APP_GIFTCHAIN_ADDRESS
+const CONTRACT_ADDRESS = "0x280593931820aBA367dB060162cA03CD59EC29c9"
 const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/uoHUh-NxGIzghN1job_SDZjGuQQ7snrT"
 
 interface ValidationErrors {
