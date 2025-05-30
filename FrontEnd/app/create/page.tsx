@@ -112,7 +112,7 @@ export default function CreateGiftCard() {
 
       return true;
     } catch (err: any) {
-      setError(`Approval failed: ${err.message || 'Unknown error'}`);
+      setError(`Approval failed: ${err.message || err.reason || 'Unknown error'}`);
       setIsApproving(false);
       return false;
     }
