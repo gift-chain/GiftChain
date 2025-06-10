@@ -11,34 +11,36 @@ import { Zap, Download, Wallet } from "lucide-react"
 import { format } from "date-fns"
 import { ethers } from "ethers"
 import { useAccount, useConnect, useConnectors } from "wagmi"
+import CONTRACT_ABI from "@/abi/GiftChain.json"
+import ERC20_ABI from "@/abi/ERC20_ABI.json";
 
 // Contract ABI (truncated for key functions)
-const CONTRACT_ABI = [
-  {
-    "inputs": [
-      {"internalType": "address", "name": "_token", "type": "address"},
-      {"internalType": "uint256[]", "name": "_amounts", "type": "uint256[]"},
-      {"internalType": "uint256[]", "name": "_expiries", "type": "uint256[]"},
-      {"internalType": "string[]", "name": "_messages", "type": "string[]"},
-      {"internalType": "bytes32[]", "name": "_giftIDs", "type": "bytes32[]"},
-      {"internalType": "bytes32", "name": "_creator", "type": "bytes32"}
-    ],
-    "name": "createBulkGifts",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-];
+// const CONTRACT_ABI = [
+//   {
+//     "inputs": [
+//       {"internalType": "address", "name": "_token", "type": "address"},
+//       {"internalType": "uint256[]", "name": "_amounts", "type": "uint256[]"},
+//       {"internalType": "uint256[]", "name": "_expiries", "type": "uint256[]"},
+//       {"internalType": "string[]", "name": "_messages", "type": "string[]"},
+//       {"internalType": "bytes32[]", "name": "_giftIDs", "type": "bytes32[]"},
+//       {"internalType": "bytes32", "name": "_creator", "type": "bytes32"}
+//     ],
+//     "name": "createBulkGifts",
+//     "outputs": [],
+//     "stateMutability": "nonpayable",
+//     "type": "function"
+//   }
+// ];
 
-// ERC20 ABI for token operations
-const ERC20_ABI = [
-  "function approve(address spender, uint256 amount) external returns (bool)",
-  "function allowance(address owner, address spender) external view returns (uint256)",
-  "function balanceOf(address account) external view returns (uint256)",
-  "function decimals() external view returns (uint8)"
-];
+// // ERC20 ABI for token operations
+// const ERC20_ABI = [
+//   "function approve(address spender, uint256 amount) external returns (bool)",
+//   "function allowance(address owner, address spender) external view returns (uint256)",
+//   "function balanceOf(address account) external view returns (uint256)",
+//   "function decimals() external view returns (uint8)"
+// ];
 
-const CONTRACT_ADDRESS = "0xBeC796A588FF34569e5D64A73D6977aAD2DDf4b9";
+const CONTRACT_ADDRESS = "0x280593931820aBA367dB060162cA03CD59EC29c9";
 
 // Token addresses (updated with valid addresses)
 const TOKEN_ADDRESSES = {
@@ -239,7 +241,7 @@ export default function CreateBulkCard() {
     }
 
     // Step 1: Generate gift codes from backend
-    const backendResponse = await fetch('http://localhost:4000/api/bulk-create', {
+    const backendResponse = await fetch('https://gift-chain-w3lp.vercel.app/api/bulk-create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -264,11 +266,12 @@ export default function CreateBulkCard() {
     
     const tokenAddress = TOKEN_ADDRESSES[tokenGroup.token as keyof typeof TOKEN_ADDRESSES];
     const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+    console.log(`Using token contract at ${tokenAddress} for ${tokenGroup.token}`);
     
     // Get token decimals
     const decimals = await tokenContract.decimals();
     console.log('DAI decimals:', await tokenContract.decimals());
-console.log('DAI balance:', ethers.formatUnits(await tokenContract.balanceOf(address), decimals));
+    console.log('DAI balance:', ethers.formatUnits(await tokenContract.balanceOf(address), decimals));
     
     const amounts = tokenGroup.gifts.map(gift => 
       ethers.parseUnits(gift.amount, decimals)
@@ -383,7 +386,7 @@ console.log('DAI balance:', ethers.formatUnits(await tokenContract.balanceOf(add
         });
 
         const { tx, generatedGifts } = await createTokenGroup(tokenGroup);
-        
+
         toast({
           title: "Transaction submitted",
           description: `${tokenGroup.token} batch - Transaction hash: ${tx.hash}`,
@@ -535,10 +538,10 @@ console.log('DAI balance:', ethers.formatUnits(await tokenContract.balanceOf(add
               <div key={index} className="p-4 border rounded-md space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
-                    type="email"
-                    value={gift.email}
-                    onChange={(e) => handleBulkGiftChange(index, 'email', e.target.value)}
-                    placeholder="recipient@email.com"
+                    type="number"
+                    value={gift.amount}
+                    onChange={(e) => handleBulkGiftChange(index, 'amount', e.target.value)}
+                    placeholder="Amount"
                     className="bg-background/40 border-primary/30"
                   />
                   
@@ -551,23 +554,23 @@ console.log('DAI balance:', ethers.formatUnits(await tokenContract.balanceOf(add
                       <option key={token} value={token}>{token}</option>
                     ))}
                   </select>
-
-                  <Input
-                    type="number"
-                    value={gift.amount}
-                    onChange={(e) => handleBulkGiftChange(index, 'amount', e.target.value)}
-                    placeholder="Amount"
-                    className="bg-background/40 border-primary/30"
-                  />
-
-                  <Input
-                    type="datetime-local"
-                    value={gift.expiry}
-                    onChange={(e) => handleBulkGiftChange(index, 'expiry', e.target.value)}
-                    min={minDateTime}
-                    className="bg-background/40 border-primary/30"
-                  />
                 </div>
+
+                <Input
+                  type="datetime-local"
+                  value={gift.expiry}
+                  onChange={(e) => handleBulkGiftChange(index, 'expiry', e.target.value)}
+                  min={minDateTime}
+                  className="bg-background/40 border-primary/30 tx-sm"
+                />
+
+                <Input
+                    type="email"
+                    value={gift.email}
+                    onChange={(e) => handleBulkGiftChange(index, 'email', e.target.value)}
+                    placeholder="recipient@email.com"
+                    className="bg-background/40 border-primary/30"
+                  />
 
                 <Textarea
                   placeholder="Gift message (3-50 characters)"

@@ -33,7 +33,7 @@ export function handleGiftCreated(event: GiftCreatedEvent): void {
   gift.amount = event.params.amount
   gift.expiry = event.params.expiry
   gift.timeCreated = event.params.timeCreated
-  gift.status = "PENDING"
+  gift.status = event.params.status
   gift.save()
 
   // Create GiftCreated event entity
@@ -55,7 +55,7 @@ export function handleGiftClaimed(event: GiftClaimedEvent): void {
   // Update Gift status
   let gift = Gift.load(event.params.giftID)
   if (gift) {
-    gift.status = "CLAIMED"
+    gift.status = event.params.status
     gift.recipient = event.params.recipient
     gift.save()
   }
@@ -76,16 +76,16 @@ export function handleGiftReclaimed(event: GiftReclaimedEvent): void {
   // Update Gift status
   let gift = Gift.load(event.params.giftID)
   if (gift) {
-    gift.status = "RECLAIMED"
-    gift.recipient = event.params.creator
+    gift.status = event.params.status
+    gift.recipient = event.params.recipient
     gift.save()
   }
 
-  let entity = new GiftReclaimed(getIdFromEventParams(event.params.giftID, event.params.creator))
+  let entity = new GiftReclaimed(getIdFromEventParams(event.params.giftID, event.params.recipient))
   // let creator = getOrCreateUser(event.params.creator)
 
   entity.gift = gift!.id
-  entity.creator = event.params.creator
+  entity.creator = event.params.recipient
   
   entity.amount = event.params.amount
   entity.blockNumber = event.block.number

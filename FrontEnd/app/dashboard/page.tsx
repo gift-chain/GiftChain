@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Gift,
   Clock,
@@ -235,6 +236,16 @@ export default function Dashboard() {
       () => gifts.filter((gift: GiftCard) => gift.creator.id === hashedAddress && gift.recipient == address?.toLowerCase()),
       [gifts, hashedAddress, address]
     );
+
+    const formatDate = (timestamp: string): string => {
+        return new Date(Number.parseInt(timestamp) * 1000).toLocaleString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        })
+    }
     
     const fetchTokenInfo = async (tokenAddress: string) => {
       const address = tokenAddress.toLowerCase();
@@ -420,7 +431,9 @@ export default function Dashboard() {
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
             <AlertCircle className="w-12 h-12 text-red-500" />
             <p className="text-lg text-red-500">Failed to load gifts</p>
-            <Button onClick={() => refetchGifts()}>Retry</Button>
+            <Button onClick={() => refetchGifts()}>
+              {loading ? <Spinner className="w-8 h-8" /> : "Retry"}
+            </Button>
           </div>
         </div>
       );
@@ -707,6 +720,23 @@ export default function Dashboard() {
     );
   }
 
+  if (giftsLoading || claimedLoading || reclaimedLoading || isLoading) {
+    return (
+      <div className="container flex items-center justify-center min-h-screen hexagon-bg text-foreground">
+        <Spinner size="lg" /> 
+        {/* <p className="mt-4 text-green-500 font-medium">Loading your dashboard...</p> */}
+      </div>
+    );
+  }
+
+  if (giftsError || claimedError || reclaimedError) {
+    return (
+      <div className="container flex items-center justify-center min-h-screen hexagon-bg text-red-500">
+        Error: {giftsError?.message || claimedError?.message || reclaimedError?.message}
+      </div>
+    );
+  }
+        
   return (
     <div className="container px-4 py-8 hexagon-bg">
       <div className="mb-8">
@@ -809,7 +839,7 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-4 md:flex-row md:gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="flex-1 glass glow-card" style={{ minHeight: "250px" }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
@@ -851,7 +881,7 @@ export default function Dashboard() {
                     index="name"
                     categories={["total"]}
                     colors={["#00b7eb"]}
-                    valueFormatter={(value: number) => `${value} cards`}
+                    valueFormatter={(value: number) => `${value} gifts`}
                     className="h-full w-full"
                   />
                 </div>
@@ -908,7 +938,7 @@ export default function Dashboard() {
                       <div>
                         <p className="font-medium text-primary">ID {giftIdCodes[card.id.toLowerCase()] || '...'}</p>
                         <p className="text-sm text-muted-foreground">Expires: 
-                          {new Date(parseInt(card.expiry) * 1000).toISOString().split("T")[0]}
+                          {formatDate(card.expiry)}
                         </p>
                         <p className="text-sm text-muted-foreground">Amount: 
                           {
@@ -1020,14 +1050,14 @@ export default function Dashboard() {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Expiry Date:</span>
                         <span className="text-foreground">
-                          {new Date(parseInt(card.expiry) * 1000).toISOString().split("T")[0]}
+                          {formatDate(card.expiry)}
                         </span>
                       </div>
                       {card.status === "CLAIMED" && card.timeCreated && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Claimed Date:</span>
                           <span className="text-foreground">
-                            {new Date(parseInt(card.claimed.blockTimestamp) * 1000).toISOString().split("T")[0]}
+                            {formatDate(card.claimed.blockTimestamp)}
                           </span>
                         </div>
                       )}
@@ -1035,7 +1065,7 @@ export default function Dashboard() {
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Created Date:</span>
                           <span className="text-foreground">
-                            {new Date(parseInt(card.timeCreated) * 1000).toISOString().split("T")[0]}
+                            {formatDate(card.timeCreated)}
                           </span>
                         </div>
                       )}
@@ -1043,16 +1073,10 @@ export default function Dashboard() {
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Reclaimed Date:</span>
                           <span className="text-foreground">
-                            {new Date(parseInt(card.reclaimed.blockTimestamp) * 1000).toISOString().split("T")[0]}
+                            {formatDate(card.reclaimed.blockTimestamp)}
                           </span>
                         </div>
-                      )} 
-                      {/* {card.status.toLowerCase() === "expired" && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Created Date:</span>
-                          <span className="text-foreground">{card.timeCreated}</span>
-                        </div>
-                      )}*/}
+                      )}
                     </div>
                   </CardContent>
                   <CardFooter>
@@ -1143,14 +1167,14 @@ export default function Dashboard() {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Expiry Date:</span>
                         <span className="text-foreground">
-                          {new Date(parseInt(card.expiry) * 1000).toISOString().split("T")[0]}
+                          {formatDate(card.expiry)}
                         </span>
                       </div>
                       {card.status === "CLAIMED" && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Claimed Date:</span>
                           <span className="text-foreground">
-                            {new Date(parseInt(card.claimed.blockTimestamp) * 1000).toISOString().split("T")[0]}
+                            {formatDate(card.claimed.blockTimestamp)}
                           </span>
                         </div>
                       )}
@@ -1158,7 +1182,7 @@ export default function Dashboard() {
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Received Date:</span>
                           <span className="text-foreground">
-                            {new Date(parseInt(card.timeCreated) * 1000).toISOString().split("T")[0]}
+                            {formatDate(card.timeCreated)}
                           </span>
                         </div>
                       )}
