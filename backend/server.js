@@ -7,6 +7,9 @@ require('dotenv').config();
 const mongoose = require("mongoose");
 const codeRoutes = require("./routes/codeRoutes.js");
 const { createGift } = require("./controllers/createGiftController.js");
+const crowdfundingRoutes = require("./routes/crowdfundingRoutes.js");
+
+console.log("Crowdfunding routes:", crowdfundingRoutes); 
 
 
 const app = express();
@@ -24,6 +27,8 @@ app.use(express.json());
 
 app.use("/api", codeRoutes);
 app.use("/api/token", require("./routes/token"));
+
+app.use("/api/crowdfunding", crowdfundingRoutes);
 
 app.get("/", (req, res) => {
   res.json("GiftChain backend is live");
