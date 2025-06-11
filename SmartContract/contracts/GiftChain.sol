@@ -424,6 +424,9 @@ function getCampaignDetails(bytes32 _campaignID) external view returns (
     bool withdrawn
 ) {
     Campaign memory campaign = campaigns[_campaignID];
+    if (campaign.creator == address(0)) {
+        revert GiftErrors.CAMPAIGN_NOT_FOUND();
+    }
     return (
         campaign.creator,
         campaign.token,

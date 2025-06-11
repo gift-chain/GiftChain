@@ -244,19 +244,21 @@ describe("GiftChain - Campaign Functionality", function () {
     });
 
     it("should allow creator to withdraw after deadline", async function () {
-      await time.increase(oneDay + 1);
+  await time.increase(oneDay + 1);
 
-      const initialBalance = await mockToken.balanceOf(await creator.getAddress());
-      const tx = await giftChain.connect(creator).withdrawCampaignFunds(campaignID);
+  const initialBalance = await mockToken.balanceOf(await creator.getAddress());
+  const tx = await giftChain.connect(creator).withdrawCampaignFunds(campaignID);
 
-      // Verify event
-      await expect(tx)
-        .to.emit(giftChain, "ContributionWithdrawn")
-        .withArgs(
-          ethers.id(await creator.getAddress()),
-          await creator.getAddress(),
-          donationAmount
-        );
+  // Correct way to verify the event - use the actual creator address hash
+  const creatorHash = ethers.keccak256(ethers.toUtf8Bytes(await creator.getAddress()));
+  
+  await expect(tx)
+    .to.emit(giftChain, "ContributionWithdrawn")
+    .withArgs(
+      creatorHash, // Use the computed hash
+      await creator.getAddress(),
+      donationAmount
+    );
 
       // Verify state
       const campaign = await giftChain.campaigns(campaignID);
