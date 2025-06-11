@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import WalletConnect from "@/components/wallet-connect";
 import { Gift, Wallet } from "lucide-react"
 import { motion } from 'framer-motion';
 import { useAccount } from "wagmi";
@@ -12,6 +13,7 @@ const MotionGift = motion(Gift);
 export default function HeroSection() {
   const [isHovered, setIsHovered] = useState(false)
   const { isConnected } = useAccount()
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <section className="relative pt-24 pb-12 md:pt-32 md:pb-24 mesh-bg overflow-hidden">
@@ -54,39 +56,46 @@ export default function HeroSection() {
         </div>
 
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
-          Blockchain Gift Cards
+          Blockchain Gifts
           <span className="text-primary glow-text"> Reimagined</span>
         </h1>
 
         <p className="text-xl text-muted-foreground max-w-[42rem] mb-8">
-          Create, send, and claim gift cards on the blockchain. A secure and modern way to share value with anyone,
+          Create, send, and claim gifts on the blockchain. A secure and modern way to share value with anyone,
           anywhere.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          {isConnected ? (<></>) : (
+          {isConnected ? (
             <>
               <Button size="lg" variant="outline" className="border-primary/50 hover:border-primary" asChild>
                 <Link href="/gift">
                   <Gift className="h-5 w-5 mr-2" />
-                  Create Gift Card
+                  Create Gift
                 </Link>
               </Button>
-
               <Button size="lg" variant="outline" className="border-primary/50 hover:border-primary" asChild>
                 <Link href="/dashboard">
                   <Gift className="h-5 w-5 mr-2" />
-                  Create Gift Card
+                  Dashboard
                 </Link>
               </Button>
             </>
+            ) : (
+            <>
+              <Button size="lg" onClick={() => setIsModalOpen(true)} className="gap-2 glow-border" asChild>
+                <Link href="">
+                  <Wallet className="h-5 w-5" />
+                  Connect Wallet
+                </Link>
+              </Button>
+              {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                  <WalletConnect handleModal={() => setIsModalOpen(false)} />
+                </div>
+              )}
+            </>
           )}
-          <Button size="lg" className="gap-2 glow-border" asChild>
-            <Link href="/dashboard">
-              <Wallet className="h-5 w-5" />
-              Connect Wallet
-            </Link>
-          </Button>
 
         </div>
       </div>

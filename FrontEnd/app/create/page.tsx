@@ -16,7 +16,6 @@ import { format } from 'date-fns';
 import { Contract, BrowserProvider, parseUnits } from 'ethers';
 // ERC-20 ABI for allowance, approve, decimals
 import ERC20_ABI from "@/abi/ERC20_ABI.json";
-import { maxUint64 } from "viem"
 
 interface GiftForm {
   token: string;
@@ -43,20 +42,15 @@ declare global {
 }
 
 export default function CreateGiftCard() {
-  // const [isConnected, setIsConnected] = useState(false)
-  // const [walletAddress, setWalletAddress] = useState("")
-  // const [amount, setAmount] = useState("")
-  // const [currency, setCurrency] = useState("ETH")
-  // const [recipient, setRecipient] = useState("")
-  // const [message, setMessage] = useState("")
   const [selectedDesign, setSelectedDesign] = useState(0)
-  // const [isCreating, setIsCreating] = useState(false)
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined)
 
   const router = useRouter()
   const { toast } = useToast()
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+
   const [form, setForm] = useState<GiftForm>({
     token: 'USDT',
     amount: '',
@@ -67,8 +61,7 @@ export default function CreateGiftCard() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
-  const [checkingAllowance, setCheckingAllowance] = useState(false);
-  const [] = useState()
+
 
   const cardDesigns = [
     "/placeholder.svg?height=200&width=320",
@@ -77,66 +70,14 @@ export default function CreateGiftCard() {
     "/placeholder.svg?height=200&width=320",
   ]
 
-  // const handleConnect = (address: string) => {
-  //   setIsConnected(true)
-  //   setWalletAddress(address)
-  // }
-
-  // const handleCreateGiftCard = async () => {
-  //   if (!amount) {
-  //     toast({
-  //       title: "Missing amount",
-  //       description: "Please enter an amount for the gift card",
-  //       variant: "destructive",
-  //     })
-  //     return
-  //   }
-
-  //   setIsCreating(true)
-
-  //   try {
-  //     // Simulate API call
-  //     await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  //     toast({
-  //       title: "Gift Card Created",
-  //       description: "Your gift card has been created successfully!",
-  //     })
-
-  //     router.push("/dashboard")
-  //   } catch (error) {
-  //     toast({
-  //       title: "Error",
-  //       description: "Failed to create gift card. Please try again.",
-  //       variant: "destructive",
-  //     })
-  //   } finally {
-  //     setIsCreating(false)
-  //   }
-  // }
-
-  // if (!isConnected) {
-  //   return <WalletConnect onConnect={handleConnect} />
-  // }
-
-  // const navigate = useNavigate();
-
-  // Relayer address (from creategift.js)
   const RELAYER_ADDRESS = '0xA07139110776DF9621546441fc0a5417B8E945DF';
 
   // Token map (Sepolia testnet addresses)
   const tokenMap: Record<string, string> = {
-    USDT: '0xb1B83B96402978F212af2415b1BffAad0D2aF1bb', // Sepolia USDT
-    USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Sepolia USDC (replace with actual)
-    DAI: '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2', // Sepolia DAI (replace with actual)
+    USDT: '0x7A8532Bd4067cD5C9834cD0eCcb8e71088c9fbf8', // Sepolia USDT
+    USDC: '0x437011e4f16a4Be60Fe01aD6678dBFf81AEbaEd4', // Sepolia USDC
+    DAI: '0xA0c61934a9bF661c0f41db06538e6674CDccFFf2', // Sepolia DAI
   };
-
-  // Token decimals map (assumes 6 for USDT/USDC/DAI)
-  // const tokenDecimals: Record<string, number> = {
-  //   USDT: 18,
-  //   USDC: 6,
-  //   DAI: 18,
-  // };
 
   const tokens = Object.keys(tokenMap);
   const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm");
@@ -154,10 +95,6 @@ export default function CreateGiftCard() {
         abi: ERC20_ABI,
       }
 
-      console.log("Got here.")
-      // Get decimals
-      // const decimals = tokenDecimals[form.token] || 6;
-      // const decimals = await tokenContract.decimals();
       const decimals = await publicClient.readContract({
         address: tokenAddress as `0x${string}`,
         abi: ERC20_ABI,
@@ -166,29 +103,13 @@ export default function CreateGiftCard() {
       console.log(decimals)
       const amountBN = parseUnits(amount, BigInt(decimals!.toString()));
 
-      // Check allowance
-      // const allowance = await tokenContract.allowance(address, RELAYER_ADDRESS);
-      const allowance = await publicClient.readContract({
-        address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        args: [signer.address, RELAYER_ADDRESS]
-      });
-      console.log("Allowance => ", allowance)
-      console.log("Got here..")
-      if (BigInt(allowance!.toString()) < BigInt(amountBN.toString())) {
-        setIsApproving(true);
-        // Approve the exact amount
-        const hash = await walletClient.writeContract({
-          address: tokenAddress as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [RELAYER_ADDRESS as `0x${string}`, maxUint64],
-        });
-        console.log(hash)
-        setIsApproving(false);
-        return true;
-      }
+      const tx = await tokenContract.approve(RELAYER_ADDRESS, amountBN);
+      console.log("Transaction => ", tx)
+      
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      console.log("Transaction receipt => ", receipt)
+
       return true;
     } catch (err: any) {
       setError(`Approval failed: ${err.message || 'Unknown error'}`);
@@ -233,10 +154,10 @@ export default function CreateGiftCard() {
       // Check and approve tokens
       const tokenAddress = tokenMap[form.token];
       console.log(tokenAddress)
-      setCheckingAllowance(true)
+      setIsApproving(true)
       const isApproved = await checkAndApprove(tokenAddress, form.amount);
-      console.log("Got here...")
-      setCheckingAllowance(false)
+
+      setIsApproving(false)
       if (!isApproved) return;
 
       // Call backend
@@ -244,7 +165,7 @@ export default function CreateGiftCard() {
       console.log("loading...", isLoading)
       console.log("form => ", form)
       const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
-      const response = await axios.post('http://localhost:4000/api/create-gift', {
+      const response = await axios.post('https://gift-chain-w3lp.vercel.app/api/create-gift', {
         token: tokenAddress,
         amount: form.amount,
         expiry: expiryTimestamp,
@@ -280,24 +201,10 @@ export default function CreateGiftCard() {
   };
 
 
-  // if(!isConnected) {
-  //   return <>
-  //   </>
-  // }
-
 
   return (
     <div className="container py-8 max-w-3xl hexagon-bg">
-      {/* <Button variant="ghost" className="mb-6 gap-2" onClick={() => router.push("/dashboard")}>
-        <ArrowLeft className="h-4 w-4" />
-        Back to Dashboard
-      </Button>
-
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2 gradient-text">Create Gift Card</h1>
-        <p className="text-muted-foreground">Fill in the details below to create a new blockchain gift card.</p>
-      </div> */}
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <div className="space-y-6">
@@ -383,7 +290,7 @@ export default function CreateGiftCard() {
           <div className="mt-8">
             <Button className="w-full gap-2 glow-border" size="lg" onClick={handleSubmit} disabled={isLoading || isApproving || !address}>
               <Zap className="h-5 w-5" />
-              {checkingAllowance ? "Checking Allowance..." : isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift...' : 'Create Gift Card'}
+              {isApproving ? 'Approving Token...' : isLoading ? 'Creating Gift... Wait a moment' : 'Create Gift Card'}
             </Button>
           </div>
 

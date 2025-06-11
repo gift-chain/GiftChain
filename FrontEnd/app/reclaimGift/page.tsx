@@ -8,13 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from "@/hooks/use-toast"
 import { CheckCircle2, XCircle } from "lucide-react"
 import { ethers } from "ethers"
-import GiftChainABI from "../../app/abi/GiftChain.json"
-import erc20ABI from "../../app/abi/erc20ABI.json"
+import GiftChainABI from "../../abi/GiftChain.json"
+import erc20ABI from "../../abi/erc20ABI.json"
 import { useAccount, useWalletClient } from "wagmi"
-import { GET_GIFTS } from "../subgraph/queries";
+import { GET_GIFTS } from "../../hooks/subgraph/queries";
 import { useQuery } from "@apollo/client"
 
-const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"
+// const CONTRACT_ADDRESS = process.env.NEXT_APP_GIFTCHAIN_ADDRESS
+const CONTRACT_ADDRESS = "0x280593931820aBA367dB060162cA03CD59EC29c9"
 const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/uoHUh-NxGIzghN1job_SDZjGuQQ7snrT"
 
 interface ValidationErrors {
@@ -54,6 +55,7 @@ export default function ReclaimGift() {
   const { data: giftsData, loading: giftsLoading } = useQuery(GET_GIFTS, {
     variables: { creator: address?.toLowerCase() },
     skip: !address, // Skip query if no address
+    fetchPolicy: "network-only",
   })
 
   // Initialize provider and contract on component mount
@@ -92,10 +94,9 @@ export default function ReclaimGift() {
       if (gift.amount == 0) {
         return {
           isValid: false,
-          message: "Gift card not found. Please check your code.",
+          message: "Gift not found. Please check your code.",
         }
       }
-
       const block = await provider.getBlock("latest")
       if (!block) {
         return {
@@ -107,7 +108,7 @@ export default function ReclaimGift() {
       if (currentTimestamp < gift.expiry) {
         return {
           isValid: false,
-          message: "This gift card has not expired.",
+          message: "This gift has not expired. You cannot reclaim it yet.",
         }
       }
 
@@ -118,38 +119,41 @@ export default function ReclaimGift() {
         }
       }
 
-      const hashAddress = ethers.keccak256(ethers.toUtf8Bytes(address!))
-      console.log(giftsData?.gifts?.creator, hashAddress);
+      const hashAddress = ethers.keccak256(ethers.getAddress(address!))
+      // const strinfiedGift = JSON.parse(JSON.stringify(giftsData))
+      // console.log(giftsData, hashAddress, strinfiedGift);
 
-      if (currentTimestamp > gift.expiry && giftsData?.gifts?.creator === hashAddress) {
-        const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
-        const tokenSymbol = await erc20.symbol()
-        const tokenDecimals = await erc20.decimals()
-        const formattedAmount = ethers.formatUnits(gift.amount, tokenDecimals)
-
-        const details = {
-          token: tokenSymbol,
-          tokenAddress: gift.token,
-          message: gift.message,
-          amount: formattedAmount,
-          expiry: gift.expiry.toString(),
-          timeCreated: gift.timeCreated.toString(),
-          claimed: gift.claimed,
-          sender: gift.creator,
-          status: gift.status,
-        }
-
+      if(gift.creator !== hashAddress) {
+        
         return {
-          isValid: true,
-          message: "Gift card is valid and ready to be claimed!",
-          details,
+          isValid: false,
+          message: "You don't have creator authorization to reclaim this gift.",
         }
+      }
+
+      const erc20 = new ethers.Contract(gift.token, erc20ABI, provider)
+      const tokenSymbol = await erc20.symbol()
+      const tokenDecimals = await erc20.decimals()
+      const formattedAmount = ethers.formatUnits(gift.amount, tokenDecimals)
+
+      const details = {
+        token: tokenSymbol,
+        tokenAddress: gift.token,
+        message: gift.message,
+        amount: formattedAmount,
+        expiry: gift.expiry.toString(),
+        timeCreated: gift.timeCreated.toString(),
+        claimed: gift.claimed,
+        sender: gift.creator,
+        status: gift.status,
       }
 
       return {
-        isValid: false,
-        message: "You don't have creator authorization to reclaim this gift.",
+        isValid: true,
+        message: "Gift is ready to be reclaim!",
+        details,
       }
+
     } catch (error: any) {
       console.error("Validation error:", error)
       let errorMessage = "An unknown error occurred."
@@ -158,13 +162,13 @@ export default function ReclaimGift() {
         const reason = error.reason || error.data?.message
         console.log("Error reason:", reason)
         if (reason.includes("GiftNotFound")) {
-          errorMessage = "Gift card not found. Please check your code."
+          errorMessage = "Gift not found. Please check your code."
         } else if (reason.includes("GiftAlreadyRedeemed")) {
-          errorMessage = "This gift card has already been redeemed."
+          errorMessage = "This gift has already been redeemed."
         } else if (reason.includes("GiftAlreadyReclaimed")) {
-          errorMessage = "This gift card has been reclaimed by the sender."
+          errorMessage = "This gift has been reclaimed by the sender."
         } else if (reason.includes("InvalidGiftStatus")) {
-          errorMessage = "This gift card is expired or has an invalid status."
+          errorMessage = "This gift is expired or has an invalid status."
         } else {
           errorMessage = `Contract error: ${reason}`
         }
@@ -192,7 +196,7 @@ export default function ReclaimGift() {
 
       // Check if window.ethereum exists
       if (!isConnected) {
-        throw new Error("MetaMask not detected. Please install MetaMask to claim your gift card.");
+        throw new Error("MetaMask not detected. Please install MetaMask to claim your gift.");
       }
 
       // Request account access first
@@ -209,12 +213,18 @@ export default function ReclaimGift() {
         functionName: "reclaimGift",
         args: [codeHash],
       });
-      console.log(provider, signer, contract, hash);
 
-      // toast({
-      //   title: "Success",
-      //   description: "Gift card claimed successfully!",
-      // });
+      // const tx = await contract.reclaimGift(codeHash);
+      // console.log("Transaction:", tx);
+      // const receipt = await tx.wait();
+      // console.log("Transaction receipt:", receipt);
+
+      // console.log(provider, signer, contract, hash);
+
+      toast({
+        title: "Success",
+        description: "Gift Reclaimed Successfully!",
+      });
       // Update UI
       setValidationResult({
         ...validationResult,
@@ -227,7 +237,7 @@ export default function ReclaimGift() {
     } catch (error: any) {
       console.error("Claim error:", error);
 
-      let errorMessage = "Failed to claim gift card";
+      let errorMessage = "Failed to claim gift";
 
       if (error.code === 4001) {
         errorMessage = "Please connect your MetaMask wallet and approve the connection request";
@@ -257,10 +267,10 @@ export default function ReclaimGift() {
 
   const handleCodeValidation = async () => {
     if (!code.trim() || code.length < 6) {
-      setErrors({ code: "Gift card code is required and must be at least 6 characters" })
+      setErrors({ code: "Gift code is required and must be at least 6 characters" })
       toast({
         title: "Error",
-        description: "Gift card code is required and must be at least 6 characters.",
+        description: "Gift code is required and must be at least 6 characters.",
         variant: "destructive",
       })
       return
@@ -283,7 +293,7 @@ export default function ReclaimGift() {
         setErrors({ code: undefined })
         toast({
           title: "Success",
-          description: "Gift card validated successfully!",
+          description: "Gift validated successfully!",
         })
       }
     } catch (error: any) {
@@ -369,7 +379,7 @@ export default function ReclaimGift() {
                 {validationResult.isValid ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
-                    Gift Card Details
+                    Gift Details
                   </>
                 ) : (
                   <>
@@ -493,11 +503,11 @@ export default function ReclaimGift() {
                     disabled={loading}
                   >
                     {loading ? (
-                      <>Claiming...</>
+                      <>Reclaiming...</>
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                        Reclaim Gift Card
+                        Reclaim Gift
                       </>
                     )}
                   </Button>
@@ -505,7 +515,7 @@ export default function ReclaimGift() {
 
                 <div className="text-center text-xs sm:text-sm text-muted-foreground">
                   <p>
-                    This gift card {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
+                    This gift {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
                     Expiry date is shown above.
                   </p>
                 </div>

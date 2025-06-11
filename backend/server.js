@@ -12,10 +12,14 @@ const { createGift } = require("./controllers/createGiftController.js");
 const app = express();
 
 mongoose.connect(process.env.MONGO_URI);
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+}));
 app.use(express.json());
 
 app.use("/api", codeRoutes);

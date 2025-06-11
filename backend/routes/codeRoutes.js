@@ -1,12 +1,23 @@
 const express = require("express");
 const router = express.Router();
-const { createCode } = require("../controllers/codeController");
-const {createGift, downloadGiftCard} = require("../controllers/createGiftController");
+const cors = require('cors');
+
+const { createCode, bulkCreateCodes } = require("../controllers/codeController");
+const {createGift, downloadGiftCard, getGiftCodes} = require("../controllers/createGiftController");
+
 const giftCode = require("../models/Gift.js");
 
+router.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+}));
+
 router.post("/generate-code", createCode);
+router.post("/bulk-create", bulkCreateCodes);
 
 router.post("/create-gift", createGift)
+router.post("/gift-codes", getGiftCodes);
 router.get("/download/:fileName", downloadGiftCard);
 
 router.get("/gift/:hashedCode", async (req, res) => {

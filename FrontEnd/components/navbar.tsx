@@ -29,9 +29,9 @@ export default function Navbar() {
     { name: "Home", path: "/" },
     { name: "Dashboard", path: "/dashboard" },
     { name: "Gift", path: "/gift" },
-    // { name: "Create", path: "/create" },
-    // { name: "Validate", path: "/validateGift" },
-    // { name: "Reclaim", path: "/reclaimGift" },
+    { name: "Bills", path: "/bills" },
+    { name: "FundMe ", path: "/fundme" },
+    { name: "Donate", path: "/donate" },
   ]
 
   return (

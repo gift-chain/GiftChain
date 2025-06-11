@@ -7,12 +7,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { CheckCircle2, XCircle } from "lucide-react"
-import { ethers } from "ethers"
-import GiftChainABI from "../../app/abi/GiftChain.json"
-import erc20ABI from "../../app/abi/erc20ABI.json"
+import { ethers, keccak256 } from "ethers"
+import GiftChainABI from "../../abi/GiftChain.json"
+import erc20ABI from "../../abi/erc20ABI.json"
 import { useAccount, useWalletClient } from "wagmi"
 
-const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473"
+const CONTRACT_ADDRESS = "0x280593931820aBA367dB060162cA03CD59EC29c9"
 const PROVIDER_URL = "https://eth-sepolia.g.alchemy.com/v2/uoHUh-NxGIzghN1job_SDZjGuQQ7snrT"
 
 interface ValidationErrors {
@@ -85,14 +85,7 @@ export default function ClaimGiftCard() {
             if (gift.amount == 0) {
                 return {
                     isValid: false,
-                    message: "Gift card not found. Please check your code.",
-                }
-            }
-
-            if (gift.status != 1) {
-                return {
-                    isValid: false,
-                    message: "This gift card has an invalid status.",
+                    message: "Gift not found. Please check your code.",
                 }
             }
 
@@ -107,14 +100,21 @@ export default function ClaimGiftCard() {
             if (currentTimestamp > gift.expiry) {
                 return {
                     isValid: false,
-                    message: "This gift card has expired.",
+                    message: "This gift has expired.",
                 }
             }
 
             if (gift.claimed) {
                 return {
                     isValid: false,
-                    message: "This gift card has already been claimed.",
+                    message: "This gift has already been claimed.",
+                }
+            }
+
+            if (gift.status != 1) {
+                return {
+                    isValid: false,
+                    message: "This gift has an invalid status.",
                 }
             }
 
@@ -140,7 +140,7 @@ export default function ClaimGiftCard() {
 
             return {
                 isValid: true,
-                message: "Gift card is valid and ready to be claimed!",
+                message: "Gift is valid and ready to be claimed!",
                 details,
             }
         } catch (error: any) {
@@ -151,13 +151,13 @@ export default function ClaimGiftCard() {
                 const reason = error.reason || error.data?.message
                 console.log("Error reason:", reason)
                 if (reason.includes("GiftNotFound")) {
-                    errorMessage = "Gift card not found. Please check your code."
+                    errorMessage = "Gift not found. Please check your code."
                 } else if (reason.includes("GiftAlreadyRedeemed")) {
-                    errorMessage = "This gift card has already been redeemed."
+                    errorMessage = "This gift has already been redeemed."
                 } else if (reason.includes("GiftAlreadyReclaimed")) {
-                    errorMessage = "This gift card has been reclaimed by the sender."
+                    errorMessage = "This gift has been reclaimed by the sender."
                 } else if (reason.includes("InvalidGiftStatus")) {
-                    errorMessage = "This gift card is expired or has an invalid status."
+                    errorMessage = "This gift is expired or has an invalid status."
                 } else {
                     errorMessage = `Contract error: ${reason}`
                 }
@@ -175,6 +175,15 @@ export default function ClaimGiftCard() {
 
     const claimGift = async () => {
         if (!validationResult?.isValid || !validationResult.details) {
+            return;
+        }
+
+        if(validationResult.details.sender === ethers.keccak256(ethers.getAddress(address!))) {
+            toast({
+                title: "Error",
+                description: "You cannot claim your own valid gift.",
+                variant: "destructive",
+            })
             return;
         }
 
@@ -218,13 +227,13 @@ export default function ClaimGiftCard() {
 
             toast({
                 title: "Success",
-                description: "Gift card claimed successfully!",
+                description: "Gift claimed successfully!",
             });
 
         } catch (error: any) {
             console.error("Claim error:", error);
 
-            let errorMessage = "Failed to claim gift card";
+            let errorMessage = "Failed to claim gift";
 
             if (error.code === 4001) {
                 errorMessage = "Please connect your MetaMask wallet and approve the connection request";
@@ -254,10 +263,10 @@ export default function ClaimGiftCard() {
 
     const handleCodeValidation = async () => {
         if (!code.trim() || code.length < 6) {
-            setErrors({ code: "Gift card code is required and must be at least 6 characters" })
+            setErrors({ code: "Gift code is required and must be at least 6 characters" })
             toast({
                 title: "Error",
-                description: "Gift card code is required and must be at least 6 characters.",
+                description: "Gift code is required and must be at least 6 characters.",
                 variant: "destructive",
             })
             return
@@ -280,7 +289,7 @@ export default function ClaimGiftCard() {
                 setErrors({ code: undefined })
                 toast({
                     title: "Success",
-                    description: "Gift card validated successfully!",
+                    description: "Gift validated successfully!",
                 })
             }
         } catch (error: any) {
@@ -340,7 +349,7 @@ export default function ClaimGiftCard() {
                             ) : (
                                 <>
                                     <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                                    Validate Gift Card
+                                    Validate Gift
                                 </>
                             )}
                         </Button>
@@ -366,7 +375,7 @@ export default function ClaimGiftCard() {
                                 {validationResult.isValid ? (
                                     <>
                                         <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
-                                        Gift Card Details
+                                        Gift Details
                                     </>
                                 ) : (
                                     <>
@@ -388,7 +397,7 @@ export default function ClaimGiftCard() {
                                             <div className="absolute inset-0 gift-card-bg gift-card-pattern"></div>
                                             <img
                                                 src="/placeholder.svg?height=300&width=500"
-                                                alt="Gift card"
+                                                alt="Gift image"
                                                 className="w-full h-full object-cover relative z-10 opacity-80"
                                             />
                                             <div className="absolute inset-0 flex flex-col justify-between text-white p-4 sm:p-6 z-20">
@@ -494,7 +503,7 @@ export default function ClaimGiftCard() {
                                         ) : (
                                             <>
                                                 <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                Claim Gift Card
+                                                Claim Gift
                                             </>
                                         )}
                                     </Button>
@@ -502,7 +511,7 @@ export default function ClaimGiftCard() {
 
                                 <div className="text-center text-xs sm:text-sm text-muted-foreground">
                                     <p>
-                                        This gift card {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
+                                        This gift {validationResult.details.claimed ? "has been claimed" : "is available to claim"}.
                                         Expiry date is shown above.
                                     </p>
                                 </div>
