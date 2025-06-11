@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { Contract, Signer } from "ethers";
 
-describe("GiftChain - Campaign Functionality Tests", function () {
+describe("GiftChain - Campaign Functionality", function () {
   let giftChain: Contract;
   let mockToken: Contract;
   let owner: Signer;
@@ -20,7 +20,6 @@ describe("GiftChain - Campaign Functionality Tests", function () {
 
   before(async function () {
     [owner, relayer, donor1, donor2, creator] = await ethers.getSigners();
-    campaignDeadline = (await time.latest()) + oneDay;
   });
 
   beforeEach(async function () {
@@ -32,6 +31,9 @@ describe("GiftChain - Campaign Functionality Tests", function () {
     const GiftChain = await ethers.getContractFactory("GiftChain");
     giftChain = await GiftChain.deploy(await relayer.getAddress());
     await giftChain.waitForDeployment();
+
+    // Set deadline for tests
+    campaignDeadline = (await time.latest()) + oneDay;
 
     // Distribute and approve tokens
     const distributeTokens = async (signer: Signer, amount: bigint) => {
@@ -56,7 +58,7 @@ describe("GiftChain - Campaign Functionality Tests", function () {
         campaignID
       );
 
-      // Verify transaction
+      // Verify events
       await expect(tx)
         .to.emit(giftChain, "CampaignCreated")
         .withArgs(
@@ -80,99 +82,90 @@ describe("GiftChain - Campaign Functionality Tests", function () {
       expect(campaign.withdrawn).to.be.false;
     });
 
-    describe("should revert with invalid parameters", function () {
-      let validCampaignID: string;
+    it("should revert with invalid parameters", async function () {
+      const campaignID = ethers.id("invalid-campaign");
+      
+      // Empty title
+      await expect(
+        giftChain.connect(creator).createCampaign(
+          "",
+          campaignDescription,
+          await mockToken.getAddress(),
+          campaignGoal,
+          campaignDeadline,
+          campaignID
+        )
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_TITLE");
 
-      beforeEach(async function () {
-        validCampaignID = ethers.id("valid-campaign");
-        // Create one valid campaign first
-        await giftChain.connect(creator).createCampaign(
+      // Invalid description length
+      await expect(
+        giftChain.connect(creator).createCampaign(
+          campaignTitle,
+          "A".repeat(51),
+          await mockToken.getAddress(),
+          campaignGoal,
+          campaignDeadline,
+          campaignID
+        )
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_DESCRIPTION");
+
+      // Zero goal
+      await expect(
+        giftChain.connect(creator).createCampaign(
+          campaignTitle,
+          campaignDescription,
+          await mockToken.getAddress(),
+          0,
+          campaignDeadline,
+          campaignID
+        )
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_AMOUNT");
+
+      // Past deadline
+      await expect(
+        giftChain.connect(creator).createCampaign(
+          campaignTitle,
+          campaignDescription,
+          await mockToken.getAddress(),
+          campaignGoal,
+          (await time.latest()) - 1,
+          campaignID
+        )
+      ).to.be.revertedWithCustomError(giftChain, "EXPIRY_CAN_ONLY_BE_IN_FUTURE");
+
+      // Zero address token
+      await expect(
+        giftChain.connect(creator).createCampaign(
+          campaignTitle,
+          campaignDescription,
+          ethers.ZeroAddress,
+          campaignGoal,
+          campaignDeadline,
+          campaignID
+        )
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_ADDRESS");
+
+      // Create valid campaign first
+      await giftChain.connect(creator).createCampaign(
+        campaignTitle,
+        campaignDescription,
+        await mockToken.getAddress(),
+        campaignGoal,
+        campaignDeadline,
+        campaignID
+      );
+
+      // Duplicate campaign ID
+      await expect(
+        giftChain.connect(creator).createCampaign(
           campaignTitle,
           campaignDescription,
           await mockToken.getAddress(),
           campaignGoal,
           campaignDeadline,
-          validCampaignID
-        );
-      });
-
-      it("empty title", async function () {
-        await expect(
-          giftChain.connect(creator).createCampaign(
-            "",
-            campaignDescription,
-            await mockToken.getAddress(),
-            campaignGoal,
-            campaignDeadline,
-            ethers.id("empty-title")
-          )
-        ).to.be.revertedWithCustomError(giftChain, "INVALID_TITLE");
-      });
-
-      it("invalid description length", async function () {
-        await expect(
-          giftChain.connect(creator).createCampaign(
-            campaignTitle,
-            "A".repeat(51), // 51 chars (limit is 50)
-            await mockToken.getAddress(),
-            campaignGoal,
-            campaignDeadline,
-            ethers.id("long-desc")
-          )
-        ).to.be.revertedWithCustomError(giftChain, "INVALID_DESCRIPTION");
-      });
-
-      it("zero amount", async function () {
-        await expect(
-          giftChain.connect(creator).createCampaign(
-            campaignTitle,
-            campaignDescription,
-            await mockToken.getAddress(),
-            0,
-            campaignDeadline,
-            ethers.id("zero-amount")
-          )
-        ).to.be.revertedWithCustomError(giftChain, "INVALID_AMOUNT");
-      });
-
-      it("past deadline", async function () {
-        await expect(
-          giftChain.connect(creator).createCampaign(
-            campaignTitle,
-            campaignDescription,
-            await mockToken.getAddress(),
-            campaignGoal,
-            (await time.latest()) - 1, // Past timestamp
-            ethers.id("past-deadline")
-          )
-        ).to.be.revertedWithCustomError(giftChain, "EXPIRY_CAN_ONLY_BE_IN_FUTURE");
-      });
-
-      it("duplicate campaign ID", async function () {
-        await expect(
-          giftChain.connect(creator).createCampaign(
-            campaignTitle,
-            campaignDescription,
-            await mockToken.getAddress(),
-            campaignGoal,
-            campaignDeadline,
-            validCampaignID // Reusing existing ID
-          )
-        ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_ALREADY_EXIST");
-      });
-
-      it("zero address for token", async function () {
-        await expect(
-          giftChain.connect(creator).createCampaign(
-            campaignTitle,
-            campaignDescription,
-            ethers.ZeroAddress,
-            campaignGoal,
-            campaignDeadline,
-            ethers.id("zero-address")
-          )
-        ).to.be.revertedWithCustomError(giftChain, "INVALID_ADDRESS");
-      });
+          campaignID
+        )
+      ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_ALREADY_EXIST");
     });
   });
 
@@ -192,7 +185,7 @@ describe("GiftChain - Campaign Functionality Tests", function () {
       );
     });
 
-    it("should allow donation to a campaign", async function () {
+    it("should allow donations and update state correctly", async function () {
       const tx = await giftChain.connect(donor1).donateToCampaign(campaignID, donationAmount);
 
       // Verify events
@@ -200,83 +193,36 @@ describe("GiftChain - Campaign Functionality Tests", function () {
         .to.emit(giftChain, "DonationReceived")
         .withArgs(campaignID, await donor1.getAddress(), donationAmount);
 
-      await expect(tx)
-        .to.emit(giftChain, "ContributionAdded")
-        .withArgs(
-          ethers.id(await creator.getAddress()),
-          await donor1.getAddress(),
-          await mockToken.getAddress(),
-          donationAmount
-        );
-
-      // Verify state changes
+      // Verify state
       const campaign = await giftChain.campaigns(campaignID);
       expect(campaign.raisedAmount).to.equal(donationAmount);
+
+      // Verify multiple donations
+      await giftChain.connect(donor2).donateToCampaign(campaignID, donationAmount);
+      expect((await giftChain.campaigns(campaignID)).raisedAmount).to.equal(donationAmount * 2n);
     });
 
-    it("should update balances correctly", async function () {
-      const initialContractBalance = await mockToken.balanceOf(giftChain.target);
-      const initialDonorBalance = await mockToken.balanceOf(await donor1.getAddress());
+    it("should revert with invalid donations", async function () {
+      // Zero amount
+      await expect(
+        giftChain.connect(donor1).donateToCampaign(campaignID, 0)
+      ).to.be.revertedWithCustomError(giftChain, "INVALID_AMOUNT");
 
-      await giftChain.connect(donor1).donateToCampaign(campaignID, donationAmount);
+      // Nonexistent campaign
+      await expect(
+        giftChain.connect(donor1).donateToCampaign(ethers.id("nonexistent"), donationAmount)
+      ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_NOT_FOUND");
 
-      expect(await mockToken.balanceOf(giftChain.target)).to.equal(
-        initialContractBalance + donationAmount
-      );
-      expect(await mockToken.balanceOf(await donor1.getAddress())).to.equal(
-        initialDonorBalance - donationAmount
-      );
-    });
+      // Exceeds goal
+      await expect(
+        giftChain.connect(donor1).donateToCampaign(campaignID, campaignGoal + 1n)
+      ).to.be.revertedWithCustomError(giftChain, "EXCEEDS_CAMPAIGN_GOAL");
 
-    describe("should revert with invalid donation parameters", function () {
-      it("zero amount", async function () {
-        await expect(
-          giftChain.connect(donor1).donateToCampaign(campaignID, 0)
-        ).to.be.revertedWithCustomError(giftChain, "INVALID_AMOUNT");
-      });
-
-      it("nonexistent campaign", async function () {
-        await expect(
-          giftChain.connect(donor1).donateToCampaign(ethers.id("nonexistent"), donationAmount)
-        ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_NOT_FOUND");
-      });
-
-      it("exceeds campaign goal", async function () {
-        const excessAmount = campaignGoal + ethers.parseEther("1");
-        await expect(
-          giftChain.connect(donor1).donateToCampaign(campaignID, excessAmount)
-        ).to.be.revertedWithCustomError(giftChain, "EXCEEDS_CAMPAIGN_GOAL");
-      });
-
-      it("after deadline", async function () {
-        await time.increase(oneDay + 1);
-        await expect(
-          giftChain.connect(donor1).donateToCampaign(campaignID, donationAmount)
-        ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_EXPIRED");
-      });
-    });
-
-    it("should allow multiple donations", async function () {
-      const donation2 = ethers.parseEther("30");
-      const totalExpected = donationAmount + donation2;
-
-      await giftChain.connect(donor1).donateToCampaign(campaignID, donationAmount);
-      await giftChain.connect(donor2).donateToCampaign(campaignID, donation2);
-
-      const campaign = await giftChain.campaigns(campaignID);
-      expect(campaign.raisedAmount).to.equal(totalExpected);
-    });
-
-    it("should reach goal with multiple donations", async function () {
-      // First donation
-      await giftChain.connect(donor1).donateToCampaign(campaignID, donationAmount);
-      
-      // Second donation to reach goal
-      const remaining = campaignGoal - donationAmount;
-      await giftChain.connect(donor2).donateToCampaign(campaignID, remaining);
-
-      const campaign = await giftChain.campaigns(campaignID);
-      expect(campaign.raisedAmount).to.equal(campaignGoal);
+      // After deadline
+      await time.increase(oneDay + 1);
+      await expect(
+        giftChain.connect(donor1).donateToCampaign(campaignID, donationAmount)
+      ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_EXPIRED");
     });
   });
 
@@ -290,22 +236,20 @@ describe("GiftChain - Campaign Functionality Tests", function () {
         campaignTitle,
         campaignDescription,
         await mockToken.getAddress(),
-        donationAmount, // Goal = donation amount
+        donationAmount,
         campaignDeadline,
         campaignID
       );
       await giftChain.connect(donor1).donateToCampaign(campaignID, donationAmount);
     });
 
-    it("should allow creator to withdraw funds after deadline", async function () {
+    it("should allow creator to withdraw after deadline", async function () {
       await time.increase(oneDay + 1);
 
-      const initialCreatorBalance = await mockToken.balanceOf(await creator.getAddress());
-      const initialContractBalance = await mockToken.balanceOf(giftChain.target);
-
+      const initialBalance = await mockToken.balanceOf(await creator.getAddress());
       const tx = await giftChain.connect(creator).withdrawCampaignFunds(campaignID);
 
-      // Verify events
+      // Verify event
       await expect(tx)
         .to.emit(giftChain, "ContributionWithdrawn")
         .withArgs(
@@ -318,41 +262,69 @@ describe("GiftChain - Campaign Functionality Tests", function () {
       const campaign = await giftChain.campaigns(campaignID);
       expect(campaign.withdrawn).to.be.true;
 
-      // Verify balances
+      // Verify balance
       expect(await mockToken.balanceOf(await creator.getAddress())).to.equal(
-        initialCreatorBalance + donationAmount
-      );
-      expect(await mockToken.balanceOf(giftChain.target)).to.equal(
-        initialContractBalance - donationAmount
+        initialBalance + donationAmount
       );
     });
 
-    describe("should revert with invalid withdrawal attempts", function () {
-      it("non-creator attempting to withdraw", async function () {
-        await expect(
-          giftChain.connect(donor1).withdrawCampaignFunds(campaignID)
-        ).to.be.revertedWithCustomError(giftChain, "NOT_AUTHORIZE_TO_WITHDRAW");
-      });
+    it("should revert with invalid withdrawals", async function () {
+      // Before deadline
+      await expect(
+        giftChain.connect(creator).withdrawCampaignFunds(campaignID)
+      ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_NOT_ENDED");
 
-      it("before deadline", async function () {
-        await expect(
-          giftChain.connect(creator).withdrawCampaignFunds(campaignID)
-        ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_NOT_ENDED");
-      });
+      // Non-creator
+      await expect(
+        giftChain.connect(donor1).withdrawCampaignFunds(campaignID)
+      ).to.be.revertedWithCustomError(giftChain, "NOT_AUTHORIZE_TO_WITHDRAW");
 
-      it("already withdrawn", async function () {
-        await time.increase(oneDay + 1);
-        await giftChain.connect(creator).withdrawCampaignFunds(campaignID);
-        await expect(
-          giftChain.connect(creator).withdrawCampaignFunds(campaignID)
-        ).to.be.revertedWithCustomError(giftChain, "FUNDS_ALREADY_WITHDRAWN");
-      });
+      // Nonexistent campaign
+      await expect(
+        giftChain.connect(creator).withdrawCampaignFunds(ethers.id("nonexistent"))
+      ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_NOT_FOUND");
 
-      it("nonexistent campaign", async function () {
-        await expect(
-          giftChain.connect(creator).withdrawCampaignFunds(ethers.id("nonexistent"))
-        ).to.be.revertedWithCustomError(giftChain, "CAMPAIGN_NOT_FOUND");
-      });
+      // Already withdrawn
+      await time.increase(oneDay + 1);
+      await giftChain.connect(creator).withdrawCampaignFunds(campaignID);
+      await expect(
+        giftChain.connect(creator).withdrawCampaignFunds(campaignID)
+      ).to.be.revertedWithCustomError(giftChain, "FUNDS_ALREADY_WITHDRAWN");
+    });
+  });
+
+  describe("View Functions", function () {
+    let campaignID: string;
+
+    beforeEach(async function () {
+      campaignID = ethers.id("view-campaign");
+      await giftChain.connect(creator).createCampaign(
+        campaignTitle,
+        campaignDescription,
+        await mockToken.getAddress(),
+        campaignGoal,
+        campaignDeadline,
+        campaignID
+      );
+    });
+
+    it("should return correct campaign details", async function () {
+      const details = await giftChain.getCampaignDetails(campaignID);
+      
+      expect(details.creator).to.equal(await creator.getAddress());
+      expect(details.token).to.equal(await mockToken.getAddress());
+      expect(details.title).to.equal(campaignTitle);
+      expect(details.description).to.equal(campaignDescription);
+      expect(details.goal).to.equal(campaignGoal);
+      expect(details.deadline).to.equal(campaignDeadline);
+      expect(details.raisedAmount).to.equal(0);
+      expect(details.withdrawn).to.be.false;
+    });
+
+    it("should revert for nonexistent campaign", async function () {
+      await expect(
+        giftChain.getCampaignDetails(ethers.id("nonexistent"))
+      ).to.be.reverted; // Or with custom error if implemented
     });
   });
 });

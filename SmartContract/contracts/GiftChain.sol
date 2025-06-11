@@ -102,9 +102,6 @@ contract GiftChain is ReentrancyGuard {
 
 
 
-
-  
-
   function createGift(
     address _token, 
     uint256 _amount, 
@@ -332,23 +329,24 @@ contract GiftChain is ReentrancyGuard {
   function createCampaign(
     string memory _title,
     string memory _description,
-    address _token,  // Add this parameter
+    address _token,
     uint256 _goal,
     uint256 _deadline,
     bytes32 _campaignID
 ) external {
+    // Validate inputs
     if (bytes(_title).length == 0) revert GiftErrors.INVALID_TITLE();
     if (bytes(_description).length == 0 || bytes(_description).length > 50) 
         revert GiftErrors.INVALID_DESCRIPTION();
-    if (_goal <= 0) revert GiftErrors.INVALID_AMOUNT();
+    if (_goal == 0) revert GiftErrors.INVALID_AMOUNT();
     if (_deadline <= block.timestamp) revert GiftErrors.EXPIRY_CAN_ONLY_BE_IN_FUTURE();
-    if (campaigns[_campaignID].creator != address(0)) 
-        revert GiftErrors.CAMPAIGN_ALREADY_EXIST();
+    if (campaigns[_campaignID].creator != address(0)) revert GiftErrors.CAMPAIGN_ALREADY_EXIST();
     if (_token == address(0)) revert GiftErrors.INVALID_ADDRESS();
 
+    // Create campaign
     campaigns[_campaignID] = Campaign({
         creator: msg.sender,
-        token: _token,  // Set the token
+        token: _token,
         title: _title,
         description: _description,
         goal: _goal,
@@ -357,19 +355,30 @@ contract GiftChain is ReentrancyGuard {
         withdrawn: false
     });
 
-    emit CampaignCreated(_campaignID, msg.sender, _title, _description, _goal, _deadline);
+    emit CampaignCreated(
+        _campaignID,
+        msg.sender,
+        _title,
+        _description,
+        _goal,
+        _deadline
+    );
 }
 
-    function donateToCampaign(bytes32 _campaignID, uint256 _amount) external nonReentrant {
+function donateToCampaign(
+    bytes32 _campaignID,
+    uint256 _amount
+) external nonReentrant {
     Campaign storage campaign = campaigns[_campaignID];
-    
+
+    // Validate campaign
     if (campaign.creator == address(0)) revert GiftErrors.CAMPAIGN_NOT_FOUND();
     if (block.timestamp > campaign.deadline) revert GiftErrors.CAMPAIGN_EXPIRED();
-    if (_amount <= 0) revert GiftErrors.INVALID_AMOUNT();
+    if (_amount == 0) revert GiftErrors.INVALID_AMOUNT();
     if (campaign.raisedAmount + _amount > campaign.goal) 
         revert GiftErrors.EXCEEDS_CAMPAIGN_GOAL();
 
-    // Use the campaign's token address instead of creator address
+    // Transfer tokens
     IERC20 token = IERC20(campaign.token);
     token.safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -391,6 +400,7 @@ function withdrawCampaignFunds(bytes32 _campaignID) external nonReentrant {
     if (msg.sender != campaign.creator) revert GiftErrors.NOT_AUTHORIZE_TO_WITHDRAW();
     if (block.timestamp <= campaign.deadline) revert GiftErrors.CAMPAIGN_NOT_ENDED();
     if (campaign.withdrawn) revert GiftErrors.FUNDS_ALREADY_WITHDRAWN();
+    if (campaign.raisedAmount == 0) revert GiftErrors.NO_FUNDS_TO_WITHDRAW();
     
     campaign.withdrawn = true;
     IERC20 token = IERC20(campaign.token);
@@ -400,6 +410,29 @@ function withdrawCampaignFunds(bytes32 _campaignID) external nonReentrant {
         keccak256(abi.encodePacked(campaign.creator)),
         msg.sender,
         campaign.raisedAmount
+    );
+}
+
+function getCampaignDetails(bytes32 _campaignID) external view returns (
+    address creator,
+    address token,
+    string memory title,
+    string memory description,
+    uint256 goal,
+    uint256 deadline,
+    uint256 raisedAmount,
+    bool withdrawn
+) {
+    Campaign memory campaign = campaigns[_campaignID];
+    return (
+        campaign.creator,
+        campaign.token,
+        campaign.title,
+        campaign.description,
+        campaign.goal,
+        campaign.deadline,
+        campaign.raisedAmount,
+        campaign.withdrawn
     );
 }
 

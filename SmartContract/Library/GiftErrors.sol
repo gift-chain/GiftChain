@@ -38,4 +38,5 @@ library GiftErrors {
     error FUNDS_ALREADY_WITHDRAWN();
     error CAMPAIGN_NOT_ENDED();
     error INSUFFICIENT_BALANCE();
+    error NO_FUNDS_TO_WITHDRAW();
 }
