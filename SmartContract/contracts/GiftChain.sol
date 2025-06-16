@@ -438,6 +438,4 @@ function getCampaignDetails(bytes32 _campaignID) external view returns (
         campaign.withdrawn
     );
 }
-
-
 }

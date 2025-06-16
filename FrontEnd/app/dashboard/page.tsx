@@ -29,7 +29,7 @@ import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts, useSin
 import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
-import { Spinner } from "@/components/ui/spinner";
+
 import giftChainABI from "../../abi/GiftChain.json";
 import ERC20_ABI from "@/abi/ERC20_ABI.json";
 
@@ -37,7 +37,8 @@ import ERC20_ABI from "@/abi/ERC20_ABI.json";
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 
 // Contract address
-const CONTRACT_ADDRESS = "0x4dbdd0111E8Dd73744F1d9A60e56129009eEE473";
+
+// const CONTRACT_ADDRESS = "0x280593931820aBA367dB060162cA03CD59EC29c9";
 
 // Stable coins address supported
 const USDT = '0x7A8532Bd4067cD5C9834cD0eCcb8e71088c9fbf8'; // Sepolia USDT
@@ -716,23 +717,6 @@ export default function Dashboard() {
             )}
           </div>
         </motion.div>
-      </div>
-    );
-  }
-
-  if (giftsLoading || claimedLoading || reclaimedLoading || isLoading) {
-    return (
-      <div className="container flex items-center justify-center min-h-screen hexagon-bg text-foreground">
-        <Spinner size="lg" /> 
-        {/* <p className="mt-4 text-green-500 font-medium">Loading your dashboard...</p> */}
-      </div>
-    );
-  }
-
-  if (giftsError || claimedError || reclaimedError) {
-    return (
-      <div className="container flex items-center justify-center min-h-screen hexagon-bg text-red-500">
-        Error: {giftsError?.message || claimedError?.message || reclaimedError?.message}
       </div>
     );
   }
