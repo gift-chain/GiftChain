@@ -29,6 +29,7 @@ import { useUserGifts, useUserClaimedGifts, useUserReclaimedGifts, Gifts, useSin
 import { ethers, formatUnits } from "ethers";
 import axios from "axios";
 import { useAccount } from "wagmi";
+
 import giftChainABI from "../../abi/GiftChain.json";
 import ERC20_ABI from "@/abi/ERC20_ABI.json";
 
@@ -36,6 +37,7 @@ import ERC20_ABI from "@/abi/ERC20_ABI.json";
 import { AreaChart, BarChart, PieChart as PieChartComponent } from "@/components/ui/chart";
 
 // Contract address
+
 // const CONTRACT_ADDRESS = "0x280593931820aBA367dB060162cA03CD59EC29c9";
 
 // Stable coins address supported
