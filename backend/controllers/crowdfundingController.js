@@ -12,7 +12,7 @@ const createCampaign = async (req, res) => {
       });
     }
 
-    // Validate goal amount
+    // Validate goal amount 
     if (Number(goalAmount) <= 0) {
       return res.status(400).json({ error: "Goal amount must be greater than 0" });
     }
