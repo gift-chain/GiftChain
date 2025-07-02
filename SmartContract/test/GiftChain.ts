@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { Contract, Signer } from "ethers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
@@ -304,4 +309,270 @@ describe("GiftChain - Comprehensive Tests", function () {
       expect(message).to.equal("Gift reclaimed");
     });
   });
+
+
+
+
+  describe("Crowdfunding Functionality", function () {
+    beforeEach(async function () {
+      const targetAmount = ethers.parseEther("500");
+      const futureTime = (await time.latest()) + oneDay;
+      const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+      
+      await giftChain.connect(relayer).createCrowdfund(
+        await mockToken.getAddress(),
+        targetAmount,
+        futureTime,
+        "Test Crowdfund",
+        testCrowdfundID,
+        creator
+      );
+    });
+
+    describe("Crowdfund Creation", function () {
+      it("should allow relayer to create crowdfund", async function () {
+        const crowdfund = await giftChain.crowdfunds(testCrowdfundID);
+        expect(crowdfund.token).to.equal(await mockToken.getAddress());
+        expect(crowdfund.targetAmount).to.equal(ethers.parseEther("500"));
+      });
+
+      it("should reject invalid token address", async function () {
+        await expect(
+          giftChain.connect(relayer).createCrowdfund(
+            ethers.ZeroAddress,
+            ethers.parseEther("100"),
+            (await time.latest()) + oneDay,
+            "Invalid Crowdfund",
+            ethers.keccak256(ethers.toUtf8Bytes("invalid-crowdfund")),
+            ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()))
+          )
+        ).to.be.revertedWith("Invalid token address");
+      });
+
+      it("should reject zero target amount", async function () {
+        await expect(
+          giftChain.connect(relayer).createCrowdfund(
+            await mockToken.getAddress(),
+            0,
+            (await time.latest()) + oneDay,
+            "Invalid Crowdfund",
+            ethers.keccak256(ethers.toUtf8Bytes("invalid-crowdfund")),
+            ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()))
+          )
+        ).to.be.revertedWith("Target must be > 0");
+      });
+
+      it("should reject past expiry", async function () {
+        await expect(
+          giftChain.connect(relayer).createCrowdfund(
+            await mockToken.getAddress(),
+            ethers.parseEther("100"),
+            (await time.latest()) - 1,
+            "Invalid Crowdfund",
+            ethers.keccak256(ethers.toUtf8Bytes("invalid-crowdfund")),
+            ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()))
+          )
+        ).to.be.revertedWith("Expiry must be future");
+      });
+    });
+
+    describe("Contributions", function () {
+      it("should allow multiple contributions", async function () {
+        const amount1 = ethers.parseEther("100");
+        const amount2 = ethers.parseEther("200");
+        
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, amount1);
+        await giftChain.connect(user3).contributeToCrowdfund(testCrowdfundID, amount2);
+        
+        const crowdfund = await giftChain.crowdfunds(testCrowdfundID);
+        expect(crowdfund.totalContributed).to.equal(ethers.parseEther("300"));
+      });
+
+      it("should track individual contributions", async function () {
+        const amount = ethers.parseEther("150");
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, amount);
+        
+        // Note: For nested mappings, we would need a view function to check contributions
+        // This assumes you've added a getContribution function to the contract
+        const contribution = await giftChain.getContribution(testCrowdfundID, await user2.getAddress());
+        expect(contribution).to.equal(amount);
+      });
+
+      it("should reject contributions after expiry", async function () {
+        await time.increase(oneDay + 1);
+        await expect(
+          giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("100"))
+        ).to.be.revertedWith("Campaign expired");
+      });
+
+      it("should reject zero amount contributions", async function () {
+        await expect(
+          giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, 0)
+        ).to.be.revertedWith("Invalid amount");
+      });
+    });
+
+    describe("Crowdfund Claiming", function () {
+      it("should allow creator to claim when goal is met", async function () {
+        // Contribute enough to meet target
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("500"));
+        
+        // Fast forward past expiry
+        await time.increase(oneDay + 1);
+        
+        // Claim funds
+        const creatorBalanceBefore = await mockToken.balanceOf(await user1.getAddress());
+        await giftChain.connect(user1).claimCrowdfund(testCrowdfundID);
+        const creatorBalanceAfter = await mockToken.balanceOf(await user1.getAddress());
+        
+        expect(creatorBalanceAfter - creatorBalanceBefore).to.equal(ethers.parseEther("500"));
+      });
+
+      it("should prevent claiming before expiry", async function () {
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("500"));
+        
+        await expect(
+          giftChain.connect(user1).claimCrowdfund(testCrowdfundID)
+        ).to.be.revertedWith("Campaign not ended");
+      });
+
+      it("should prevent claiming before goal is met", async function () {
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("300"));
+        await time.increase(oneDay + 1);
+        
+        await expect(
+          giftChain.connect(user1).claimCrowdfund(testCrowdfundID)
+        ).to.be.revertedWith("Goal not met");
+      });
+
+      it("should prevent non-creator from claiming", async function () {
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("500"));
+        await time.increase(oneDay + 1);
+        
+        await expect(
+          giftChain.connect(user2).claimCrowdfund(testCrowdfundID)
+        ).to.be.revertedWith("Not creator");
+      });
+
+      it("should prevent double claiming", async function () {
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("500"));
+        await time.increase(oneDay + 1);
+        
+        await giftChain.connect(user1).claimCrowdfund(testCrowdfundID);
+        await expect(
+          giftChain.connect(user1).claimCrowdfund(testCrowdfundID)
+        ).to.be.revertedWith("Already claimed");
+      });
+    });
+
+    describe("Refunds", function () {
+      it("should allow contributors to refund if goal not met", async function () {
+        const contributionAmount = ethers.parseEther("200");
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, contributionAmount);
+        
+        // Fast forward past expiry
+        await time.increase(oneDay + 1);
+        
+        // Refund
+        const userBalanceBefore = await mockToken.balanceOf(await user2.getAddress());
+        await giftChain.connect(user2).refundCrowdfund(testCrowdfundID);
+        const userBalanceAfter = await mockToken.balanceOf(await user2.getAddress());
+        
+        expect(userBalanceAfter - userBalanceBefore).to.equal(contributionAmount);
+      });
+
+      it("should prevent refunds if goal is met", async function () {
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("500"));
+        await time.increase(oneDay + 1);
+        
+        await expect(
+          giftChain.connect(user2).refundCrowdfund(testCrowdfundID)
+        ).to.be.revertedWith("Target met no refunds");
+      });
+
+      it("should prevent refunds before expiry", async function () {
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("200"));
+        
+        await expect(
+          giftChain.connect(user2).refundCrowdfund(testCrowdfundID)
+        ).to.be.revertedWith("Campaign not ended");
+      });
+
+      it("should prevent double refunds", async function () {
+        await giftChain.connect(user2).contributeToCrowdfund(testCrowdfundID, ethers.parseEther("200"));
+        await time.increase(oneDay + 1);
+        
+        await giftChain.connect(user2).refundCrowdfund(testCrowdfundID);
+        await expect(
+          giftChain.connect(user2).refundCrowdfund(testCrowdfundID)
+        ).to.be.revertedWith("No contribution to refund");
+      });
+    });
+
+    describe("Comprehensive Crowdfund Lifecycle", function () {
+      it("should complete successful crowdfund lifecycle", async function () {
+        // 1. Create crowdfund
+        const lifecycleCrowdfundID = ethers.keccak256(ethers.toUtf8Bytes("lifecycle-crowdfund"));
+        const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+        
+        await giftChain.connect(relayer).createCrowdfund(
+          await mockToken.getAddress(),
+          ethers.parseEther("600"),
+          (await time.latest()) + oneDay,
+          "Lifecycle Crowdfund",
+          lifecycleCrowdfundID,
+          creator
+        );
+        
+        // 2. Make contributions
+        await giftChain.connect(user2).contributeToCrowdfund(lifecycleCrowdfundID, ethers.parseEther("300"));
+        await giftChain.connect(user3).contributeToCrowdfund(lifecycleCrowdfundID, ethers.parseEther("300"));
+        
+        // 3. Fast forward past expiry
+        await time.increase(oneDay + 1);
+        
+        // 4. Claim funds
+        const creatorBalanceBefore = await mockToken.balanceOf(await user1.getAddress());
+        await giftChain.connect(user1).claimCrowdfund(lifecycleCrowdfundID);
+        const creatorBalanceAfter = await mockToken.balanceOf(await user1.getAddress());
+        
+        expect(creatorBalanceAfter - creatorBalanceBefore).to.equal(ethers.parseEther("600"));
+      });
+
+      it("should complete failed crowdfund lifecycle", async function () {
+        // 1. Create crowdfund
+        const failedCrowdfundID = ethers.keccak256(ethers.toUtf8Bytes("failed-crowdfund"));
+        const creator = ethers.keccak256(ethers.toUtf8Bytes(await user1.getAddress()));
+        
+        await giftChain.connect(relayer).createCrowdfund(
+          await mockToken.getAddress(),
+          ethers.parseEther("1000"),
+          (await time.latest()) + oneDay,
+          "Failed Crowdfund",
+          failedCrowdfundID,
+          creator
+        );
+        
+        // 2. Make insufficient contributions
+        await giftChain.connect(user2).contributeToCrowdfund(failedCrowdfundID, ethers.parseEther("400"));
+        await giftChain.connect(user3).contributeToCrowdfund(failedCrowdfundID, ethers.parseEther("300"));
+        
+        // 3. Fast forward past expiry
+        await time.increase(oneDay + 1);
+        
+        // 4. Refund contributions
+        const user2BalanceBefore = await mockToken.balanceOf(await user2.getAddress());
+        const user3BalanceBefore = await mockToken.balanceOf(await user3.getAddress());
+        
+        await giftChain.connect(user2).refundCrowdfund(failedCrowdfundID);
+        await giftChain.connect(user3).refundCrowdfund(failedCrowdfundID);
+        
+        const user2BalanceAfter = await mockToken.balanceOf(await user2.getAddress());
+        const user3BalanceAfter = await mockToken.balanceOf(await user3.getAddress());
+        
+        expect(user2BalanceAfter - user2BalanceBefore).to.equal(ethers.parseEther("400"));
+        expect(user3BalanceAfter - user3BalanceBefore).to.equal(ethers.parseEther("300"));
+      });
+    });
+
 });

@@ -25,7 +25,8 @@ const codeSchema = new mongoose.Schema({
 
    email: {
       type: String,
-      required: true
+      required: true,
+      default: "",
    },
 
    amount: {

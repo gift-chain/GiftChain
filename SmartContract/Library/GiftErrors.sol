@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.26;
 
 library GiftErrors {
@@ -27,5 +26,17 @@ library GiftErrors {
     error GiftAlreadyReclaimed();
     error InvalidGiftStatus();
     error GiftNotFound();
-    error GiftExpired();
+
+    // New errors for campaign functionality
+    error INVALID_TITLE();
+    error INVALID_DESCRIPTION();
+    error CAMPAIGN_ALREADY_EXIST();
+    error CAMPAIGN_NOT_FOUND();
+    error CAMPAIGN_EXPIRED();
+    error EXCEEDS_CAMPAIGN_GOAL();
+    error NOT_AUTHORIZE_TO_WITHDRAW();
+    error FUNDS_ALREADY_WITHDRAWN();
+    error CAMPAIGN_NOT_ENDED();
+    error INSUFFICIENT_BALANCE();
+    error NO_FUNDS_TO_WITHDRAW();
 }

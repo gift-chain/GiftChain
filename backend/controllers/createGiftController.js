@@ -502,32 +502,15 @@ const createGift = async (req, res) => {
           console.log("Gift saved to MongoDB successfully");
         } catch (dbError) {
           console.error("Failed to save gift to MongoDB:", dbError);
-          // Attempt to refund tokens to creator
-          try {
-            console.log("Attempting to return tokens due to database error...");
-            const returnTx = await erc20.transfer(creator, amountBN);
-            await returnTx.wait();
-            console.log("Tokens returned successfully");
-            return res.status(500).json({
-              success: false,
-              error: "Failed to save gift to database",
-              details: {
-                dbError: dbError.message,
-                tokensReturned: true,
-                returnTransaction: returnTx.hash,
-              },
-            });
-          } catch (returnErr) {
-            console.error("Failed to return tokens:", returnErr);
-            return res.status(500).json({
-              success: false,
-              error: "Failed to save gift to database and return tokens",
-              details: {
-                dbError: dbError.message,
-                returnError: returnErr.message,
-              },
-            });
-          }
+          return res.status(400).json({
+            success: false,
+            error: "Failed to save gift to database",
+            details: {
+              dbError: dbError.message,
+              tokensReturned: true,
+              returnTransaction: returnTx.hash,
+            },
+          });
         }
 
         // // Generate PNG
@@ -541,7 +524,7 @@ const createGift = async (req, res) => {
         //   symbol,
         // });
 
-        res.status(200).json({ 
+        res.status(201).json({ 
           success: true, 
           message: "Gift Created Successfully",
           details: {

@@ -8,7 +8,7 @@ const {createGift, downloadGiftCard, getGiftCodes} = require("../controllers/cre
 const giftCode = require("../models/Gift.js");
 
 router.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://gift-chain.vercel.app',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
 }));
