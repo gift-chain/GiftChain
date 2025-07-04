@@ -1,7 +1,7 @@
 import { WEB3AUTH_NETWORK } from "@web3auth/modal";
 import { type Web3AuthContextConfig } from "@web3auth/modal/react";
 
-const clientId = "BHgArYmWwSeq21czpcarYh0EVq2WWOzflX-NTK-tY1-1pauPzHKRRLgpABkmYiIV_og9jAvoIxQ8L3Smrwe04Lw"; // Replace with your actual client ID from https://dashboard.web3auth.io
+const clientId = "BK3oQ3ZOwv9frm_1fN5ZZv-p2G7kWxxl0UjKPSGHrwrt7zb0F6CmCSwnBUwP2GojHMeJWXd0bi6qW7klUrsXruY"; // Replace with your actual client ID from https://dashboard.web3auth.io
 
 const web3AuthContextConfig: Web3AuthContextConfig = {
   web3AuthOptions: {
