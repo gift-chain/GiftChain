@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Copy, Gift, LogOut, Menu, Zap } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useAccount, useDisconnect } from "wagmi"
+import { useAccount } from "wagmi"
+import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser } from "@web3auth/modal/react";
 import WalletConnect from "./wallet-connect"
 import { toast } from "./ui/use-toast"
 
@@ -15,9 +16,10 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false)
   const [modal, setModal] = useState<boolean>(false)
 
-  const { disconnect } = useDisconnect()
-  const { address, isConnected } = useAccount()
-
+  const { isConnected } = useWeb3AuthConnect();
+const { disconnect } = useWeb3AuthDisconnect();
+const { userInfo } = useWeb3AuthUser();
+const { address } = useAccount();
   const handleModal = () => {
     setModal((prev) => !prev)
   }

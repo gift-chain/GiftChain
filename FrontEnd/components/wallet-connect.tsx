@@ -1,49 +1,55 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Wallet, AlertCircle, Zap } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useConnect } from 'wagmi';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Wallet, AlertCircle, Zap } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useWeb3AuthConnect, useWeb3AuthUser } from "@web3auth/modal/react";
+import { useConnect } from "wagmi";
 
 interface WalletConnectProps {
-  onConnect: (address: string) => void
+  onConnect: (address: string) => void;
 }
 
-export default function WalletConnect({ handleModal }: { handleModal: () => void }) {
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [error, setError] = useState("")
-  const { connectors, connect } = useConnect();
+export default function WalletConnect({
+  handleModal,
+}: {
+  handleModal: () => void;
+}) {
+  // const [isConnecting, setIsConnecting] = useState(false)
+  const [error, setError] = useState("");
+  // const { connectors, connect } = useConnect();
 
+  const {
+    connect,
+    isConnected,
+    connectorName,
+    loading: connectLoading,
+    error: connectError,
+  } = useWeb3AuthConnect();
+  const { userInfo } = useWeb3AuthUser();
 
   // const handleModal = () => {
   //   setModal((prev) => !prev)
   // }
 
   const handleConnect = async () => {
-
-    // Prevent clicks inside the modal from closing it
-    const stopPropagation = (e: React.MouseEvent) => {
-      e.stopPropagation();
-    };
-    // setIsConnecting(true)
-    setError("")
-
-    // try {
-    //   // Simulate wallet connection
-    //   await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    //   // Mock wallet address
-    //   const mockAddress = "0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("")
-
-    //   onConnect(mockAddress)
-    // } catch (err) {
-    //   setError("Failed to connect wallet. Please try again.")
-    // } finally {
-    //   setIsConnecting(false)
-    // }
-  }
+    setError("");
+    try {
+      await connect();
+      handleModal(); // Close modal after successful connection
+    } catch (err) {
+      setError("Failed to connect wallet. Please try again.");
+    }
+  };
 
   return (
     <div className="container flex items-center justify-center min-h-[100vh] hexagon-bg">
@@ -56,8 +62,13 @@ export default function WalletConnect({ handleModal }: { handleModal: () => void
 
       <Card className="w-full max-w-md crypto-card glow-card border-0">
         <CardHeader>
-          <CardTitle className="text-2xl text-center gradient-text">Connect Your Wallet</CardTitle>
-          <CardDescription className="text-center">Connect your blockchain wallet to access your gift cards and dashboard.</CardDescription>
+          <CardTitle className="text-2xl text-center gradient-text">
+            Connect Your Wallet
+          </CardTitle>
+          <CardDescription className="text-center">
+            Connect your blockchain wallet to access your gift cards and
+            dashboard.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* {error && (
@@ -67,24 +78,36 @@ export default function WalletConnect({ handleModal }: { handleModal: () => void
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )} */}
-
-          {connectors.map((connector) => (
-            <div className="rounded-lg border border-primary/30 p-4 flex items-center gap-4 cursor-pointer hover:bg-primary/10 transition-colors" key={connector.id}
-              onClick={() => {
-                connect({ connector });
-                handleModal();
-                console.log(connector)
-              }}>
-              <div className="bg-primary/20 p-2 rounded-full">
-                <img src={connector.icon} className="w-6 h-6" alt="" />
-              </div>
-              <div>
-                {/* <h3 className="font-medium">MetaMask</h3> */}
-
-                <p className="text-lg text-muted-foreground">{connector.name}</p>
-              </div>
+          <div
+            className="rounded-lg border border-primary/30 p-4 flex items-center gap-4 cursor-pointer hover:bg-primary/10 transition-colors"
+            onClick={handleConnect}
+          >
+            <div className="bg-primary/20 p-2 rounded-full">
+              <Wallet className="h-6 w-6 text-primary" />
             </div>
-          ))}
+            <div>
+              <h3 className="font-medium">Web3Auth</h3>
+              <p className="text-sm text-muted-foreground">
+                Connect with social login or existing wallet
+              </p>
+            </div>
+          </div>
+        
+          {connectError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{connectError.message}</AlertDescription>
+            </Alert>
+          )}
+          
+          {/* <Button
+            className="w-full glow-border bg-red-900 hover:bg-red-800"
+            onClick={handleModal}
+            disabled={connectLoading}
+          >
+            {connectLoading ? "Connecting..." : "Cancel Connection"}
+          </Button> */}
           {/* {connectors.map((connector) => (
             <button
               key={connector.id}
@@ -96,9 +119,6 @@ export default function WalletConnect({ handleModal }: { handleModal: () => void
               {connector.name}
             </button>
           ))} */}
-
-
-
           {/* <div className="rounded-lg border border-primary/30 p-4 flex items-center gap-4 cursor-pointer hover:bg-primary/10 transition-colors">
             <div className="bg-primary/20 p-2 rounded-full">
               <Zap className="h-6 w-6 text-primary" />
@@ -120,7 +140,10 @@ export default function WalletConnect({ handleModal }: { handleModal: () => void
           </div> */}
         </CardContent>
         <CardFooter>
-          <Button className="w-full glow-border bg-red-900 hover:bg-red-800" onClick={handleModal}>
+          <Button
+            className="w-full glow-border bg-red-900 hover:bg-red-800"
+            onClick={handleModal}
+          >
             Cancel Connection
           </Button>
           {/* <Button className="w-full glow-border" onClick={handleConnect} disabled={isConnecting}>
@@ -129,5 +152,5 @@ export default function WalletConnect({ handleModal }: { handleModal: () => void
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
