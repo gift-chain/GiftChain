@@ -92,7 +92,7 @@ export default function WalletConnect({
               </p>
             </div>
           </div>
-          // Add error display back
+        
           {connectError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -100,14 +100,14 @@ export default function WalletConnect({
               <AlertDescription>{connectError.message}</AlertDescription>
             </Alert>
           )}
-          // Update the Cancel button to show loading state
-          <Button
+          
+          {/* <Button
             className="w-full glow-border bg-red-900 hover:bg-red-800"
             onClick={handleModal}
             disabled={connectLoading}
           >
             {connectLoading ? "Connecting..." : "Cancel Connection"}
-          </Button>
+          </Button> */}
           {/* {connectors.map((connector) => (
             <button
               key={connector.id}
