@@ -13,9 +13,10 @@ import { ArrowLeft, Zap } from "lucide-react"
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Contract, BrowserProvider, parseUnits } from 'ethers';
+import { Contract, BrowserProvider, parseUnits, getAddress, keccak256 } from 'ethers';
 // ERC-20 ABI for allowance, approve, decimals
 import ERC20_ABI from "@/abi/ERC20_ABI.json";
+import GIFTCHAIN_ABI from "@/abi/GiftChain.json";
 
 interface GiftForm {
   token: string;
@@ -70,7 +71,9 @@ export default function CreateGiftCard() {
     "/placeholder.svg?height=200&width=320",
   ]
 
-  const RELAYER_ADDRESS = '0xA07139110776DF9621546441fc0a5417B8E945DF';
+  // const RELAYER_ADDRESS = '0xA07139110776DF9621546441fc0a5417B8E945DF';
+  const CONTRACT_ADDRESS = '0x00856f962b1472B1A6629006eD48a51A1B0B04CE';
+  const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
 
   // Token map (Sepolia testnet addresses)
   const tokenMap: Record<string, string> = {
@@ -83,7 +86,12 @@ export default function CreateGiftCard() {
   const minDateTime = format(new Date(), "yyyy-MM-dd'T'HH:mm");
 
   // Check allowance and approve if needed
-  const checkAndApprove = async (tokenAddress: string, amount: string) => {
+  const approveOrCreate = async (
+    tokenAddress: string, 
+    amount: string, 
+    task: string,
+    hashedCode: string,
+  ) => {
     if (!publicClient || !walletClient || !address) return false;
     try {
       // Initialize Ethers.js provider and signer
@@ -103,7 +111,23 @@ export default function CreateGiftCard() {
       console.log(decimals)
       const amountBN = parseUnits(amount, BigInt(decimals!.toString()));
 
-      const tx = await tokenContract.approve(RELAYER_ADDRESS, amountBN);
+      let tx;
+      if (task === "approve") {
+        tx = await tokenContract.approve(CONTRACT_ADDRESS, amountBN);
+      }
+
+      if (task === "create") {
+        const giftChainContract = new Contract(CONTRACT_ADDRESS, GIFTCHAIN_ABI, signer);
+        const creatorHash = keccak256(getAddress(address!));
+        tx = await giftChainContract.createGift(
+          tokenAddress,
+          amount,
+          expiryTimestamp,
+          form.message,
+          hashedCode,
+          creatorHash,
+        )
+      }
       console.log("Transaction => ", tx)
       
       // Wait for confirmation
@@ -155,7 +179,7 @@ export default function CreateGiftCard() {
       const tokenAddress = tokenMap[form.token];
       console.log(tokenAddress)
       setIsApproving(true)
-      const isApproved = await checkAndApprove(tokenAddress, form.amount);
+      const isApproved = await approveOrCreate(tokenAddress, form.amount, "approve", "");
 
       setIsApproving(false)
       if (!isApproved) return;
@@ -164,15 +188,24 @@ export default function CreateGiftCard() {
       setIsLoading(true);
       console.log("loading...", isLoading)
       console.log("form => ", form)
-      const expiryTimestamp = Math.floor(new Date(form.expiry).getTime() / 1000);
-      const response = await axios.post('https://gift-chain-w3lp.vercel.app/api/create-gift', {
+      
+      // const response = await axios.post('https://gift-chain-w3lp.vercel.app/api/create-gift', {
+      const response = await axios.post('http://localhost:4000/api/generate-code', {
         token: tokenAddress,
         amount: form.amount,
         expiry: expiryTimestamp,
         message: form.message,
-        creator: address,
+        senderAddress: address,
       });
-      console.log(response)
+      console.log(response);
+      console.log(response.data);
+
+      const isCreated = await approveOrCreate(tokenAddress, form.amount, "create", response.data.hashedCode);
+
+      if (isCreated) {
+        console.log("Gift created successfully");
+      }
+
       toast({
         title: "Gift Created",
         description: "Your gift has been created successfully",
