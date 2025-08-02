@@ -9,7 +9,7 @@ import {GiftErrors} from  "../Library/GiftErrors.sol";
 
 contract GiftChain is ReentrancyGuard {
   using SafeERC20 for IERC20;
-  address private relayer;
+//   address private relayer;
 
   struct Gift {
     address token;
@@ -60,14 +60,14 @@ contract GiftChain is ReentrancyGuard {
   );
 
 
-  constructor(address _relayer) {
-    relayer = _relayer;
-  }
+//   constructor(address _relayer) {
+//     relayer = _relayer;
+//   }
 
-  modifier onlyRelayer {
-    if(msg.sender != relayer) revert GiftErrors.ONLY_RELAYER_HAS_ACCESS();
-    _;
-  }
+//   modifier onlyRelayer {
+//     if(msg.sender != relayer) revert GiftErrors.ONLY_RELAYER_HAS_ACCESS();
+//     _;
+//   }
   
 
   function createGift(
@@ -77,7 +77,7 @@ contract GiftChain is ReentrancyGuard {
     string memory _message,
     bytes32 _giftID,
     bytes32 _creator
-    ) external onlyRelayer() {
+    ) external {
 
     if(_token == address(0)) revert GiftErrors.INVALID_ADDRESS();
 
