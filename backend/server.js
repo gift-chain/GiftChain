@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 4000;
 
 
 app.use(cors({
-  origin: 'https://gift-chain.vercel.app',
+  origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
 }));

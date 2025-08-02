@@ -4,7 +4,7 @@ const { sendGiftCodeEmail } = require("../utils/emailService.js");
 
 const createCode = async (req, res) => {
   try {
-    const { senderAddress } = req.body;
+    const { senderAddress, expiry, message, amount, token } = req.body;
 
     if (!senderAddress) {
       return res.status(400).json({ error: "Sender address is required" });
@@ -16,15 +16,19 @@ const createCode = async (req, res) => {
       rawCode,
       hashedCode,
       senderAddress,
+      token,
+      amount,
+      expiry: new Date(expiry),
+      message: message.trim(),
       giftID: rawCode,
       fee: 0,
     });
 
     await creatorCode.save();
 
-    res.status(200).json({ rawCode, message: "Code generated and saved" });
+    res.status(200).json({ rawCode, hashedCode, message: "Code generated and saved" });
   } catch (error) {
-    console.error("Error saving user code:", error);
+    console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
